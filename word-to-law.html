@@ -477,8 +477,7 @@ function initPolicyTimeline() {
 
   const laneLabelData = Object.values(POLICY_DOOR_LANES).map(lane => ({
     label: lane.label,
-    x: pathDataCenterX + lane.offset * tlXSpread,
-    stickyX: lane.label === 'closes doors' ? W * 0.02 : lane.label === 'opens doors' ? W * 0.26 : W * 0.14
+    x: pathDataCenterX + lane.offset * tlXSpread
   }));
 
   const laneGuides = cameraGroup.append('g').attr('class', 'tl-lane-guides');
