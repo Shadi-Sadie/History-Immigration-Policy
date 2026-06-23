@@ -1,0 +1,797 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>From the Word to the Law</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:       #1a1814;
+  --ink-mid:   #4a4640;
+  --ink-soft:  #8a8680;
+  --ink-faint: #c8c4be;
+  --paper:     #faf8f4;
+  --paper-mid: #f0ece4;
+  --rule:      #d8d2c8;
+  --serif: 'Lora', Georgia, serif;
+  --body:  'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+html{scroll-behavior:smooth;}
+body{background:#0a1128;color:#f5f1e8;font-family:var(--body);font-size:17px;font-weight:400;line-height:1.6;min-height:100vh;}
+.page{max-width:620px;margin:0 auto;padding:0 1.25rem;}
+
+.policy-history-section {
+  position: relative;
+  background: #0a1128;
+  color: #f5f1e8;
+}
+
+.tl-intro-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 50;
+  background: #0a1128;
+  color: #f5f1e8;
+  font-family: 'Crimson Text', serif;
+}
+
+.tl-section-eye {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.7rem;
+  letter-spacing: 0.25em;
+  text-transform: uppercase;
+  color: #d4a574;
+  margin-bottom: 0.75rem;
+}
+
+.tl-intro-title {
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(2rem,5vw,3.5rem);
+  line-height: 1.2;
+  margin-bottom: 1.5rem;
+  color: #d4a574;
+  font-weight: 700;
+}
+
+.tl-intro-sub {
+  font-family: 'Crimson Text', serif;
+  font-size: 1.2rem;
+  color: rgba(245,241,232,0.8);
+  max-width: 600px;
+  margin: 0 auto;
+  line-height: 1.8;
+}
+
+.tl-intro-method {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  color: rgba(212,165,116,0.55);
+  max-width: 520px;
+  margin: 1.5rem auto 0;
+  line-height: 1.7;
+  letter-spacing: 0.02em;
+  border-top: 1px solid rgba(212,165,116,0.18);
+  padding-top: 1.25rem;
+}
+
+.tl-intro-hint {
+  font-size: 0.9rem;
+  margin-top: 3rem;
+  opacity: 0.5;
+  font-family: 'Crimson Text', serif;
+  color: #f5f1e8;
+}
+
+.tl-timeline-container {
+  position: relative;
+  min-height: 1500vh;
+  background: linear-gradient(180deg, #0f1a2e 0%, #1a2f4a 100%);
+}
+
+.tl-viz-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  background: linear-gradient(180deg, #0f1a2e 0%, #1a2f4a 100%);
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+}
+
+.policy-history-section.is-active .tl-viz-wrapper {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+#timeline-viz {
+  width: 100%;
+  height: 100%;
+}
+
+.tl-traveler {
+  display: none;
+}
+
+/* policy cards — appended to body during timeline */
+.policy-item {
+  position: fixed;
+  z-index: 100;
+  top: 50%;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  max-height: 85vh;
+  overflow-y: auto;
+}
+
+.policy-item.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.policy-item.left {
+  left: 3%;
+  animation: slideInLeft 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+.policy-item.right {
+  right: 3%;
+  animation: slideInRight 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+}
+
+@keyframes slideInLeft {
+  from { transform: translateY(-50%) translateX(-40px); opacity: 0; }
+  to   { transform: translateY(-50%) translateX(0);    opacity: 1; }
+}
+
+@keyframes slideInRight {
+  from { transform: translateY(-50%) translateX(40px); opacity: 0; }
+  to   { transform: translateY(-50%) translateX(0);    opacity: 1; }
+}
+
+.policy-card {
+  background: rgba(15,26,46,0.95);
+  border: 2px solid #d4a574;
+  padding: 2rem;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  width: 370px;
+  max-width: 90vw;
+  font-family: 'Crimson Text', serif;
+  color: #f5f1e8;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.3);
+}
+
+.policy-year {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: #d4a574;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.policy-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  color: #f5f1e8;
+  line-height: 1.3;
+}
+
+.policy-type {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 3px;
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: rgba(212,165,116,0.15);
+  color: #d4a574;
+  text-transform: uppercase;
+}
+
+.policy-description {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: rgba(245,241,232,0.9);
+  margin-bottom: 1.2rem;
+  border-left: 2px solid rgba(212,165,116,0.3);
+  padding-left: 1rem;
+}
+
+.policy-impact {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(245,241,232,0.8);
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: rgba(212,165,116,0.08);
+  border-radius: 4px;
+}
+
+.policy-impact strong {
+  color: #ff9680;
+  font-weight: 700;
+}
+
+.policy-note {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: rgba(212,165,116,0.8);
+  font-style: italic;
+  border-top: 1px solid rgba(212,165,116,0.2);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.policy-photo {
+  width: 360px;
+  max-width: 90vw;
+  border: 2px solid #d4a574;
+  border-radius: 8px;
+  background: linear-gradient(180deg, rgba(212,165,116,0.18) 0%, rgba(20,30,50,0.92) 100%);
+  box-shadow: 0 18px 42px rgba(0,0,0,0.28);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  aspect-ratio: 4/3;
+  font-size: 0.9rem;
+  color: rgba(245,241,232,0.78);
+  text-align: center;
+  padding: 1.4rem;
+  font-family: 'Crimson Text', serif;
+}
+
+@media(max-width:768px) {
+  .tl-intro-title { font-size: clamp(1.8rem, 8vw, 2.6rem); }
+  .tl-intro-sub {
+    font-size: 1rem;
+    max-width: 24rem;
+    line-height: 1.65;
+    padding: 0 1rem;
+  }
+  .tl-intro-hint { margin-top: 2rem; }
+  .tl-timeline-container { min-height: 1200vh; }
+  .policy-card,.policy-photo { width: 90vw; }
+  .policy-item.left  { left: 2%; }
+  .policy-item.right { right: 2%; }
+}
+
+@media(max-width:640px) {
+  .policy-item.right {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
+    transform: translateX(-50%);
+  }
+  .policy-card {
+    max-height: 52vh;
+    overflow: auto;
+    padding: 1.1rem 1rem 1rem;
+  }
+  .policy-photo { display: none; }
+  .policy-item.right.active { animation: none; }
+}
+</style>
+</head>
+<body>
+
+<div id="policy-history" class="policy-history-section">
+  <div class="tl-intro-section">
+    <div class="page">
+      <p class="tl-section-eye">Part Two, continued</p>
+      <h2 class="tl-intro-title">From the word to the law</h2>
+      <p class="tl-intro-sub">If "immigrant" became a category for deciding who belongs, policy is where that category hardened. Scroll to follow the path.</p>
+      <p class="tl-intro-method">Each law falls into one of three lanes: closes doors, mixed, or opens doors.</p>
+      <p class="tl-intro-hint">↓ Scroll to begin ↓</p>
+    </div>
+  </div>
+  <div class="tl-timeline-container">
+    <div class="tl-viz-wrapper">
+      <svg id="timeline-viz" viewBox="0 0 1200 800"></svg>
+      <div class="tl-traveler"></div>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script>
+const policies = [
+  // lean: -1 = maximally restrictive, +1 = maximally expansive
+  { lean: -0.50, year: "1600s-1770s", title: "Colonial Settlement", type: "Exclusion", description: "European settlers sought economic and political freedom while forced migrants—enslaved Africans and indentured servants—had no choice.", impact: "Set foundation for race-based hierarchy in America.", note: "Quick naturalization incentivized settlement but excluded non-Europeans." },
+  { lean: -0.70, year: "1790", title: "Naturalization Act", type: "Citizenship", description: "First federal naturalization law established citizenship exclusively for 'free white persons' of good moral character after 2 years of residency.", impact: "Explicitly written racial exclusion into US law.", note: "Non-whites, indentured servants, and enslaved people categorically barred." },
+  { lean: -0.80, year: "1798", title: "Alien and Sedition Acts", type: "Enforcement", description: "Residency requirement for naturalization jumped from 5 to 14 years. President granted sweeping power to arrest and deport 'dangerous' aliens without due process.", impact: "Turned immigration enforcement into a political weapon.", note: "Targeted noncitizens from 'hostile nations' and anyone deemed a threat." },
+  { lean: -0.20, year: "1808", title: "Slave Trade Prohibition", type: "Exclusion", description: "Federal law banned the transatlantic slave trade, effective January 1, 1808. However, enslavement continued and was never addressed.", impact: "Slavery remained legal; enslaved people stayed ineligible for citizenship.", note: "Weak enforcement allowed illegal smuggling for decades." },
+  { lean: -0.95, year: "1857", title: "Dred Scott v. Sandford", type: "Court Decision", description: "Supreme Court ruled that no Black person—enslaved or free—could be a US citizen. Chief Justice Taney declared Blacks had 'no rights which the white man was bound to respect.'", impact: "Stripped citizenship from free Black Americans.", note: "Directly precipitated Civil War tensions. Overturned 87 years later." },
+  { lean:  0.85, year: "1868", title: "14th Amendment", type: "Constitutional Reform", description: "Birthright citizenship established for all persons born or naturalized in the US, regardless of race. This overturned Dred Scott and extended citizenship to freed enslaved people.", impact: "Citizenship based on birth, not race.", note: "Racial bars for naturalization of immigrants remained until 1952." },
+  { lean: -0.60, year: "1875", title: "Page Act", type: "Exclusion", description: "Barred entry of criminals, prostitutes, and Chinese contract laborers. Established port inspections and required ship manifests—the first continual tracking of arrivals.", impact: "Created bureaucratic apparatus for exclusion.", note: "In practice, heavily targeted Chinese women on suspicion of prostitution." },
+  { lean: -0.95, year: "1882", title: "Chinese Exclusion Act", type: "Exclusion", description: "Suspended Chinese laborers' entry for 10 years (later made indefinite). Chinese immigrants explicitly barred from naturalization. Imposed head tax and mandated deportation.", impact: "First US law to exclude an entire nationality by race.", note: "Remained the most restrictive immigration law until 1924." },
+  { lean: -0.50, year: "1891", title: "Immigration Act", type: "Enforcement", description: "Established the Bureau of Immigration. Expanded grounds for exclusion: polygamists, contagious disease, felons. Deportation possible within 1 year of unlawful entry.", impact: "Centralized federal immigration control.", note: "Gave immigration inspectors final authority with minimal due process." },
+  { lean: -0.65, year: "1917", title: "Literacy Act", type: "Exclusion", description: "Required literacy tests for adults over 16. Excluded immigrants from the 'Asiatic Barred Zone' (most of Asia and Pacific), chronic alcoholics, and those with 'psychopathic inferiority.'", impact: "Literacy test had disparate impact on many groups.", note: "Head tax raised to $8—enormous sum for poor immigrants." },
+  { lean: -0.90, year: "1924", title: "National Origins Act", type: "Quota System", description: "Capped immigration at 2% of 1890 census, heavily favoring Northwestern Europeans. Asians completely barred. Western Hemisphere exempt from caps (aimed at Mexico).", impact: "Codified racist hierarchy in law. Created US Border Patrol.", note: "Remained in effect until 1965. Explicitly intended to maintain Anglo-Saxon dominance." },
+  { lean: -0.55, year: "1940", title: "Alien Registration Act", type: "Enforcement", description: "All aliens over 14 required to register and be fingerprinted. Targeted Communists, Fascists, and Nazis. Made alien smuggling a crime.", impact: "Massive surveillance apparatus during WWII.", note: "Set precedent for wartime immigration control." },
+  { lean: -1.00, year: "1942", title: "Japanese American Internment", type: "Wartime Internment", description: "120,000+ people of Japanese descent—two-thirds US citizens—forcibly removed and incarcerated without charges or trial in 10 War Relocation Authority camps.", impact: "Citizenship offered zero protection.", note: "Upheld by Supreme Court in Korematsu v. US (1944). Redress in 1988." },
+  { lean:  0.15, year: "1943", title: "Magnuson Act", type: "Partial Reform", description: "Repealed complete Chinese exclusion (1882) and allowed limited immigration. Chinese, Indians, and Filipinos finally eligible for naturalization, but under tiny national quotas.", impact: "First crack in racial bars.", note: "Still excluded large numbers. A response to Chinese alliance during WWII." },
+  { lean:  0.05, year: "1952", title: "McCarran-Walter Act", type: "Comprehensive Reform", description: "Eliminated all racial and gender barriers to naturalization. Centralized and standardized immigration law. Created preference system for high-skilled workers and family reunification.", impact: "End of explicit racial bars to naturalization.", note: "But tightened deportation grounds and expanded 'subversive' definitions." },
+  { lean:  0.90, year: "1965", title: "Hart-Celler Act", type: "Liberal Reform", description: "Abolished national origin and race quotas entirely. Massive preference (74%) for family reunification. First numerical cap on Western Hemisphere (120,000).", impact: "Landmark civil rights era legislation.", note: "Unexpected consequence: dramatic shift in immigration sources." },
+  { lean:  0.65, year: "1975", title: "Indochina Refugee Act", type: "Refugee Admission", description: "130,000+ Vietnamese, Cambodian, and Laotian refugees admitted following fall of Saigon and Khmer Rouge takeover. Used emergency parole authority to bypass normal quotas.", impact: "Federal resettlement funding provided to states.", note: "Set stage for formal asylum system. Demonstrated US Cold War commitment." },
+  { lean:  0.60, year: "1980", title: "Refugee Act", type: "Formal System", description: "Established formal domestic resettlement and asylum procedures aligned with UN protocols. Refugees fleeing persecution based on race, religion, nationality, or politics could apply.", impact: "Created legal framework for asylum.", note: "Separated refugee admissions from regular immigration caps." },
+  { lean:  0.55, year: "1986", title: "Immigration Reform Act", type: "Amnesty + Enforcement", description: "Amnestied nearly 3 million undocumented immigrants present since 1982. Simultaneously imposed employer sanctions and increased Border Patrol by 50%.", impact: "Only comprehensive legalization in modern US history.", note: "Employer sanctions spawned document fraud industry. Scored here as net-positive on access despite enforcement provisions, because permanent legal status for 3M people is the larger effect." },
+  { lean: -0.60, year: "1994", title: "Operation Gatekeeper", type: "Enforcement", description: "Massively expanded border fencing and surveillance, especially San Diego. 'Prevention through deterrence' strategy intentionally pushed crossings into deadlier desert terrain.", impact: "Thousands died in subsequent years. Shifted patterns to Arizona and Texas.", note: "Part of broader militarization of southern border." },
+  { lean: -0.80, year: "1996", title: "IIRIRA & AEDPA", type: "Enforcement Expansion", description: "Created expedited removal with minimal due process. Established 3- and 10-year bars for unlawful presence. Mandatory detention. Allowed secret evidence in terrorism cases.", impact: "Massive expansion of deportation grounds.", note: "Applied retroactively. Started era of mass deportation infrastructure." },
+  { lean: -0.85, year: "2001-06", title: "Post-9/11 Security Acts", type: "Security Enforcement", description: "Created Department of Homeland Security, ICE, CBP. Authorized 850 miles of border fencing. Instituted NSEERS registry targeting Muslims and Arabs. Biometric visa system.", impact: "Transformed immigration into national security issue.", note: "Sweeping surveillance powers. Remains most expansive period." },
+  { lean:  0.25, year: "2012", title: "DACA", type: "Executive Reform", description: "Executive action granted temporary reprieve and work permits to ~700,000 unauthorized immigrants brought as children. No path to citizenship; not a law.", impact: "First positive action for undocumented immigrants in decades.", note: "Scored lower than the 1986 amnesty: DACA covers fewer people, offers no permanence, and can be revoked by the next administration—as nearly happened in 2017." },
+  { lean: -0.90, year: "2017-18", title: "Travel Ban & Family Separation", type: "Restrictive Enforcement", description: "Executive travel ban on multiple Muslim-majority countries (upheld by Supreme Court). Zero tolerance policy criminally prosecuted all border crossers; ~5,500 children separated from parents.", impact: "Most controversial policies in recent history.", note: "Thousands of children traumatized. Reunification efforts continued for years." }
+];
+
+const POLICY_PATH_COLOR = '#c0a13a';
+const POLICY_DOOR_LANES = {
+  closes: { label: 'closes doors', offset: -1 },
+  mixed: { label: 'mixed', offset: 0 },
+  opens: { label: 'opens doors', offset: 1 }
+};
+
+function getPolicyDoorLane(policy) {
+  if (policy.lean <= -0.25) return 'closes';
+  if (policy.lean >= 0.25 || policy.title === 'Immigration Reform Act') return 'opens';
+  return 'mixed';
+}
+
+// ── TIMELINE STATE ─────────────────────────────────────────────────────
+let tlInitialized = false;
+let tlActiveCard = null;
+let tlActivePhoto = null;
+let tlCurrentIndex = -1;
+
+function clearTimelineOverlays() {
+  if (tlActiveCard) { tlActiveCard.remove(); tlActiveCard = null; }
+  if (tlActivePhoto) { tlActivePhoto.remove(); tlActivePhoto = null; }
+  tlCurrentIndex = -1;
+}
+
+function getPathDistanceToPoint(pathNode, len, point) {
+  const pt = pathNode.getPointAtLength(len);
+  const dx = pt.x - point.x;
+  const dy = pt.y - point.y;
+  return dx * dx + dy * dy;
+}
+
+function getNodePathLengths(pathNode, points, totalLen) {
+  const coarseSteps = 8000;
+  const coarseStepLen = totalLen / coarseSteps;
+  const matches = points.map((_, index) => ({
+    len: index === 0 ? 0 : index === points.length - 1 ? totalLen : 0,
+    dist: Infinity
+  }));
+
+  for (let step = 0; step <= coarseSteps; step++) {
+    const len = (step / coarseSteps) * totalLen;
+    const pt = pathNode.getPointAtLength(len);
+
+    points.forEach((point, index) => {
+      const dx = pt.x - point.x;
+      const dy = pt.y - point.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < matches[index].dist) matches[index] = {dist, len};
+    });
+  }
+
+  const lengths = matches.map((match, index) => {
+    if (index === 0) return 0;
+    if (index === points.length - 1) return totalLen;
+
+    let bestLen = match.len;
+    let bestDist = getPathDistanceToPoint(pathNode, bestLen, points[index]);
+    let delta = coarseStepLen;
+
+    for (let i = 0; i < 24; i++) {
+      const leftLen = Math.max(0, bestLen - delta);
+      const rightLen = Math.min(totalLen, bestLen + delta);
+      const leftDist = getPathDistanceToPoint(pathNode, leftLen, points[index]);
+      const rightDist = getPathDistanceToPoint(pathNode, rightLen, points[index]);
+
+      if (leftDist < bestDist && leftDist <= rightDist) {
+        bestLen = leftLen;
+        bestDist = leftDist;
+      } else if (rightDist < bestDist) {
+        bestLen = rightLen;
+        bestDist = rightDist;
+      } else {
+        delta /= 2;
+      }
+    }
+
+    return bestLen;
+  });
+
+  for (let i = 1; i < lengths.length; i++) {
+    if (lengths[i] < lengths[i - 1]) lengths[i] = lengths[i - 1];
+  }
+
+  return lengths;
+}
+
+// ── SCROLL-DRIVEN POLICY TIMELINE ─────────────────────────────────────
+function initPolicyTimeline() {
+  if (tlInitialized) return;
+
+  const svgEl = document.getElementById('timeline-viz');
+  if (!svgEl || typeof d3 === 'undefined') return;
+
+  tlInitialized = true;
+
+  const svg = d3.select('#timeline-viz');
+  const W = 1200, H = 800;
+  const isMobileTimeline = window.matchMedia('(max-width: 768px)').matches;
+  const viewCenterX = W * (isMobileTimeline ? 0.5 : 0.14);
+  const pathDataCenterX = W / 2;
+  const tlXSpread = W * (isMobileTimeline ? 0.14 : 0.22);
+  const tlYSpan = H * (isMobileTimeline ? 3.2 : 3.5);
+  const bgPathWidth = isMobileTimeline ? 14 : 18;
+  const animPathWidth = isMobileTimeline ? 12 : 16;
+  const nodeRadius = isMobileTimeline ? 10 : 12;
+  const nodeStrokeWidth = isMobileTimeline ? 2 : 2.5;
+  const yearOffset = isMobileTimeline ? 22 : 28;
+  const baseYearSize = isMobileTimeline ? 12 : 14;
+  const activeYearSize = isMobileTimeline ? 18 : 28;
+  const baseYearStrokeWidth = isMobileTimeline ? 2.5 : 3;
+  const activeYearStrokeWidth = isMobileTimeline ? 3 : 4;
+
+  // Build path points: x snaps to three editorial lanes, y encodes time.
+  const points = policies.map((p, i) => {
+    const t = i / (policies.length - 1);
+    const lane = POLICY_DOOR_LANES[getPolicyDoorLane(p)];
+    return {
+      x: pathDataCenterX + lane.offset * tlXSpread,
+      y: H * 0.15 + tlYSpan * t,
+      lane: lane.label,
+      index: i
+    };
+  });
+
+  const line = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveMonotoneY);
+  const pathData = line(points);
+
+  // ── CAMERA GROUP — all path/node content moves together ───────────────
+  const cameraGroup = svg.append('g').attr('class', 'tl-camera');
+
+  const laneLabelData = Object.values(POLICY_DOOR_LANES).map(lane => ({
+    label: lane.label,
+    x: pathDataCenterX + lane.offset * tlXSpread,
+    stickyX: lane.label === 'closes doors' ? W * 0.02 : lane.label === 'opens doors' ? W * 0.26 : W * 0.14
+  }));
+
+  const laneGuides = cameraGroup.append('g').attr('class', 'tl-lane-guides');
+  laneLabelData.forEach(lane => {
+    laneGuides.append('line')
+      .attr('x1', lane.x).attr('y1', H * 0.08)
+      .attr('x2', lane.x).attr('y2', H * 0.15 + tlYSpan)
+      .attr('stroke', 'rgba(192,161,58,0.11)')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '3,7');
+
+  });
+
+  // Overview highlight path (slightly brighter, fades out as you zoom in)
+  const overviewBgPath = cameraGroup.append('path').attr('class', 'tl-overview-bg').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', 'rgba(192,161,58,0.26)')
+    .attr('stroke-width', bgPathWidth + 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+  // Background path
+  cameraGroup.append('path').attr('class', 'tl-bg-path').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', 'rgba(192,161,58,0.1)')
+    .attr('stroke-width', bgPathWidth).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+  // Animated path
+  const animPath = cameraGroup.append('path').attr('class', 'tl-anim-path').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', POLICY_PATH_COLOR)
+    .attr('stroke-width', animPathWidth).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round')
+    .attr('stroke-dasharray', function() { return this.getTotalLength(); })
+    .attr('stroke-dashoffset', function() { return this.getTotalLength(); });
+
+  // Nodes
+  const nodeGroups = cameraGroup.selectAll('.tl-node').data(points).enter()
+    .append('g').attr('class', 'tl-node')
+    .attr('transform', d => `translate(${d.x},${d.y})`);
+
+  nodeGroups.append('circle').attr('r', nodeRadius)
+    .attr('fill', 'rgba(192,161,58,0.3)')
+    .attr('stroke', POLICY_PATH_COLOR).attr('stroke-width', nodeStrokeWidth);
+
+  nodeGroups.append('text')
+    .attr('class', 'tl-node-year')
+    .attr('x', yearOffset)
+    .attr('y', 4)
+    .attr('text-anchor', 'start')
+    .attr('fill', POLICY_PATH_COLOR)
+    .style('font-family', "var(--serif)")
+    .style('font-size', `${baseYearSize}px`).style('font-weight', '600')
+    .style('font-style', 'italic')
+    .style('letter-spacing', '0.02em')
+    .style('paint-order', 'stroke')
+    .style('stroke', 'rgba(10,17,40,0.9)')
+    .style('stroke-width', `${baseYearStrokeWidth}px`)
+    .style('opacity', 0)
+    .text(d => policies[d.index].year);
+
+  // Fixed axis overlay — NOT in cameraGroup, stays screen-fixed
+  const axis = svg.append('g').attr('class', 'tl-axis');
+
+  const laneLabels = axis.selectAll('.tl-lane-label').data(laneLabelData).enter()
+    .append('text')
+      .attr('class', 'tl-lane-label')
+      .attr('x', d => d.x).attr('y', 34)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'rgba(192,161,58,0.7)')
+      .style('font-family', "'Space Mono', monospace")
+      .style('font-size', '9px').style('letter-spacing', '1px')
+      .text(d => d.label);
+
+  // Connector — updated per-frame so it tracks the active node as camera moves
+  const connector = axis.append('line')
+    .attr('class', 'tl-connector')
+    .attr('stroke', 'rgba(192,161,58,0.4)')
+    .attr('stroke-width', 1)
+    .attr('stroke-dasharray', '4,5')
+    .style('display', 'none');
+
+  // SVG traveler dot — sits inside the active node's gold circle, tracks per-frame
+  const travelerDot = axis.append('circle')
+    .attr('r', 6)
+    .attr('fill', POLICY_PATH_COLOR)
+    .style('filter', 'drop-shadow(0 0 10px rgba(192,161,58,0.9))')
+    .style('display', 'none')
+    .attr('cx', viewCenterX).attr('cy', H / 2);
+
+  const totalLen = animPath.node().getTotalLength();
+  const nodeAtLength = getNodePathLengths(animPath.node(), points, totalLen);
+  const snapDistance = isMobileTimeline ? 40 : 34;
+
+  // ── OVERVIEW CAMERA CONSTANTS ─────────────────────────────────────────
+  const pathCenterX = pathDataCenterX;
+  const pathCenterY = H * 0.15 + tlYSpan / 2;
+  const pathTotalHeight = H * 0.15 + tlYSpan;
+  const overviewScale = (H * 0.82) / pathTotalHeight;
+  const overviewTx = viewCenterX - overviewScale * pathCenterX;
+  const overviewTy = H / 2 - overviewScale * pathCenterY;
+
+  // Compute overviewX for each lane label — the screen x of each lane in overview phase
+  laneLabelData.forEach(lane => {
+    lane.overviewX = lane.x * overviewScale + overviewTx;
+  });
+
+  // Phase thresholds (as fraction of total container scroll)
+  const OVERVIEW_END = 0.06;
+  const ZOOMIN_END   = 0.14;
+
+  let currentCardSide = 'right';
+
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+  function updatePolicyTimeline() {
+    const sectionEl = document.getElementById('policy-history');
+    if (!sectionEl) return;
+
+    const containerEl = sectionEl.querySelector('.tl-timeline-container');
+    if (!containerEl) return;
+
+    const sectionTop = sectionEl.offsetTop;
+    const sectionBottom = sectionTop + sectionEl.offsetHeight;
+    const containerTop = sectionTop + containerEl.offsetTop;
+    const scrollTop = window.scrollY;
+    const activationBuffer = Math.min(window.innerHeight * 0.18, 180);
+    const activationTop = containerTop + activationBuffer;
+    const sectionActive = scrollTop >= activationTop && scrollTop < sectionBottom;
+    sectionEl.classList.toggle('is-active', sectionActive);
+    if (!sectionActive) {
+      clearTimelineOverlays();
+      return;
+    }
+
+    const rel = Math.max(0, scrollTop - activationTop);
+    const maxScroll = Math.max(1, containerEl.offsetHeight - window.innerHeight - activationBuffer);
+    const progress = Math.min(1, rel / maxScroll);
+    const canActivateNode = rel > 2;
+
+    // ── PHASE LOGIC: overview → zoom-in → follow ──────────────────────
+    let camTx, camTy, camScale, followProgress;
+
+    if (progress <= OVERVIEW_END) {
+      camTx = overviewTx;
+      camTy = overviewTy;
+      camScale = overviewScale;
+      followProgress = 0;
+
+    } else if (progress <= ZOOMIN_END) {
+      const t = easeInOut((progress - OVERVIEW_END) / (ZOOMIN_END - OVERVIEW_END));
+      const firstPt = points[0];
+      const followTx = viewCenterX - firstPt.x;
+      const followTy = H / 2 - firstPt.y;
+      camTx = overviewTx + (followTx - overviewTx) * t;
+      camTy = overviewTy + (followTy - overviewTy) * t;
+      camScale = overviewScale + (1 - overviewScale) * t;
+      followProgress = 0;
+
+    } else {
+      followProgress = (progress - ZOOMIN_END) / (1 - ZOOMIN_END);
+      const tipLen = followProgress * totalLen;
+      const tip = animPath.node().getPointAtLength(tipLen);
+      camTx = viewCenterX - tip.x;
+      camTy = H / 2 - tip.y;
+      camScale = 1;
+    }
+
+    cameraGroup.attr('transform', `translate(${camTx},${camTy}) scale(${camScale})`);
+    const laneFollowT = progress <= OVERVIEW_END ? 0 :
+      progress <= ZOOMIN_END ? easeInOut((progress - OVERVIEW_END) / (ZOOMIN_END - OVERVIEW_END)) : 1;
+    laneLabels
+      .attr('x', d => {
+        const cameraX = d.x * camScale + camTx;
+        return d.overviewX + (cameraX - d.overviewX) * laneFollowT;
+      })
+      .style('opacity', d => {
+        if (progress <= OVERVIEW_END) return 1;
+        if (progress <= ZOOMIN_END) return 1;
+        // Follow phase: hide labels whose lane is far off-screen
+        const cameraX = d.x * camScale + camTx;
+        return (cameraX >= -80 && cameraX <= W + 80) ? 1 : 0;
+      });
+
+    const overviewFade = progress <= OVERVIEW_END ? 1 :
+      progress <= ZOOMIN_END ? 1 - (progress - OVERVIEW_END) / (ZOOMIN_END - OVERVIEW_END) : 0;
+    overviewBgPath.style('opacity', overviewFade);
+
+    const labelOpacity = progress <= OVERVIEW_END ? 0 :
+      progress <= ZOOMIN_END ? (progress - OVERVIEW_END) / (ZOOMIN_END - OVERVIEW_END) : 1;
+    cameraGroup.selectAll('.tl-node-year').style('opacity', labelOpacity);
+
+    travelerDot.style('display', progress > ZOOMIN_END ? null : 'none');
+    travelerDot.attr('cx', viewCenterX).attr('cy', H / 2);
+
+    animPath.attr('stroke-dashoffset', totalLen * (1 - followProgress));
+
+    const isFollowPhase = progress > ZOOMIN_END;
+
+    let passedIndex = -1;
+    let activeIndex = -1;
+
+    if (isFollowPhase && canActivateNode) {
+      const tipLen = followProgress * totalLen;
+      for (let i = 0; i < nodeAtLength.length; i++) {
+        if (tipLen >= nodeAtLength[i]) passedIndex = i;
+        else break;
+      }
+      let snapIdx2 = -1, snapGap2 = Infinity;
+      nodeAtLength.forEach((nodeLen, index) => {
+        const gap = Math.abs(tipLen - nodeLen);
+        if (gap < snapGap2) { snapGap2 = gap; snapIdx2 = index; }
+      });
+      if (snapGap2 <= snapDistance) activeIndex = snapIdx2;
+    }
+
+    const activeCardSide = 'right';
+
+    if (!isMobileTimeline && activeIndex >= 0) {
+      const nodeScreenX = points[activeIndex].x * camScale + camTx;
+      const nodeScreenY = points[activeIndex].y * camScale + camTy;
+      connector
+        .style('display', null)
+        .attr('x1', nodeScreenX).attr('y1', nodeScreenY)
+        .attr('x2', W - 25)
+        .attr('y2', nodeScreenY);
+    } else {
+      connector.style('display', 'none');
+    }
+
+    cameraGroup.selectAll('g.tl-node circle').each(function(d) {
+      if (d.index === activeIndex)
+        d3.select(this).style('filter', 'drop-shadow(0 0 20px rgba(192,161,58,0.9))');
+      else if (d.index < passedIndex)
+        d3.select(this).style('filter', 'drop-shadow(0 0 12px rgba(192,161,58,0.6))');
+      else
+        d3.select(this).style('filter', 'none');
+    });
+
+    cameraGroup.selectAll('g.tl-node text.tl-node-year').each(function(d) {
+      const year = d3.select(this);
+      if (d.index === activeIndex) {
+        year
+          .attr('fill', '#dec463')
+          .style('font-size', `${activeYearSize}px`)
+          .style('font-weight', '700')
+          .style('stroke', 'rgba(10,17,40,0.96)')
+          .style('stroke-width', `${activeYearStrokeWidth}px`)
+          .style('filter', 'drop-shadow(0 0 10px rgba(192,161,58,0.38))');
+      } else if (d.index < passedIndex) {
+        year
+          .attr('fill', POLICY_PATH_COLOR)
+          .style('font-size', `${baseYearSize}px`)
+          .style('font-weight', '600')
+          .style('stroke', 'rgba(10,17,40,0.9)')
+          .style('stroke-width', `${baseYearStrokeWidth}px`)
+          .style('filter', 'none');
+      } else {
+        year
+          .attr('fill', 'rgba(192,161,58,0.72)')
+          .style('font-size', `${baseYearSize}px`)
+          .style('font-weight', '600')
+          .style('stroke', 'rgba(10,17,40,0.85)')
+          .style('stroke-width', `${baseYearStrokeWidth}px`)
+          .style('filter', 'none');
+      }
+    });
+
+    if (activeIndex === -1) {
+      clearTimelineOverlays();
+      return;
+    }
+
+    if (activeIndex === tlCurrentIndex || activeIndex >= policies.length) return;
+    tlCurrentIndex = activeIndex;
+
+    const policy    = policies[activeIndex];
+    currentCardSide = activeCardSide;
+
+    if (tlActiveCard)  { tlActiveCard.remove();  tlActiveCard  = null; }
+    if (tlActivePhoto) { tlActivePhoto.remove(); tlActivePhoto = null; }
+
+    tlActiveCard = document.createElement('div');
+    tlActiveCard.className = `policy-item ${currentCardSide} active`;
+    tlActiveCard.innerHTML = `
+      <div class="policy-photo">📷 ${policy.title}</div>
+      <div class="policy-card">
+        <div class="policy-year">${policy.year}</div>
+        <div class="policy-title">${policy.title}</div>
+        <div class="policy-type">${policy.type}</div>
+        <p class="policy-description">${policy.description}</p>
+        <div class="policy-impact"><strong>Impact:</strong> ${policy.impact}</div>
+        <div class="policy-note">${policy.note}</div>
+      </div>`;
+    document.body.appendChild(tlActiveCard);
+  }
+
+  window.addEventListener('scroll', updatePolicyTimeline);
+  updatePolicyTimeline();
+}
+
+// Initialize on load — reset scroll first so browser restoration doesn't start mid-timeline
+window.addEventListener('DOMContentLoaded', () => {
+  window.scrollTo(0, 0);
+  setTimeout(initPolicyTimeline, 100);
+});
+
+// Reinitialize on resize so mobile/desktop layout constants stay correct
+let tlResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(tlResizeTimer);
+  tlResizeTimer = setTimeout(() => {
+    const svgEl = document.getElementById('timeline-viz');
+    if (svgEl) svgEl.innerHTML = '';
+    clearTimelineOverlays();
+    tlInitialized = false;
+    initPolicyTimeline();
+  }, 250);
+});
+</script>
+</body>
+</html>
