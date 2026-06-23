@@ -768,7 +768,7 @@ function initPolicyTimeline() {
         <div class="policy-type">${policy.type}</div>
         <p class="policy-description">${policy.description}</p>
         <div class="policy-impact"><strong>Impact:</strong> ${policy.impact}</div>
-        <div class="policy-note">${policy.note}</div>
+        ${policy.note ? `<div class="policy-note">${policy.note}</div>` : ''}
       </div>`;
     document.body.appendChild(tlActiveCard);
   }
