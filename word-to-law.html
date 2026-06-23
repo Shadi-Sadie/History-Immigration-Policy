@@ -129,7 +129,6 @@ body{background:#0a1128;color:#f5f1e8;font-family:var(--body);font-size:17px;fon
 .policy-item {
   position: fixed;
   z-index: 100;
-  top: 50%;
   transform: translateY(-50%);
   opacity: 0;
   pointer-events: none;
@@ -147,22 +146,17 @@ body{background:#0a1128;color:#f5f1e8;font-family:var(--body);font-size:17px;fon
 
 .policy-item.left {
   left: 3%;
-  animation: slideInLeft 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  animation: fadeInCard 0.35s ease forwards;
 }
 
 .policy-item.right {
-  right: 3%;
-  animation: slideInRight 0.8s cubic-bezier(0.34,1.56,0.64,1) forwards;
+  /* left/top set by JS from SVG anchor coordinates */
+  animation: fadeInCard 0.35s ease forwards;
 }
 
-@keyframes slideInLeft {
-  from { transform: translateY(-50%) translateX(-40px); opacity: 0; }
-  to   { transform: translateY(-50%) translateX(0);    opacity: 1; }
-}
-
-@keyframes slideInRight {
-  from { transform: translateY(-50%) translateX(40px); opacity: 0; }
-  to   { transform: translateY(-50%) translateX(0);    opacity: 1; }
+@keyframes fadeInCard {
+  from { opacity: 0; transform: translateY(-50%) translateX(12px); }
+  to   { opacity: 1; transform: translateY(-50%) translateX(0); }
 }
 
 .policy-card {
@@ -273,7 +267,7 @@ body{background:#0a1128;color:#f5f1e8;font-family:var(--body);font-size:17px;fon
   .tl-timeline-container { min-height: 1200vh; }
   .policy-card,.policy-photo { width: 90vw; }
   .policy-item.left  { left: 2%; }
-  .policy-item.right { right: 2%; }
+  /* .right position set by JS on tablet — keep right fallback only on small screens */
 }
 
 @media(max-width:640px) {
@@ -442,6 +436,7 @@ function initPolicyTimeline() {
 
   const svg = d3.select('#timeline-viz');
   const W = 1200, H = 800;
+  const CONNECTOR_LEN = 90; // SVG units — connector length from node to card edge
   const isMobileTimeline = window.matchMedia('(max-width: 768px)').matches;
   const viewCenterX = W * (isMobileTimeline ? 0.5 : 0.14);
   const pathDataCenterX = W / 2;
@@ -549,8 +544,8 @@ function initPolicyTimeline() {
   // Connector — updated per-frame so it tracks the active node as camera moves
   const connector = axis.append('line')
     .attr('class', 'tl-connector')
-    .attr('stroke', 'rgba(192,161,58,0.4)')
-    .attr('stroke-width', 1)
+    .attr('stroke', 'rgba(212,165,116,0.65)')
+    .attr('stroke-width', 1.5)
     .attr('stroke-dasharray', '4,5')
     .style('display', 'none');
 
@@ -584,6 +579,15 @@ function initPolicyTimeline() {
   const ZOOMIN_END   = 0.14;
 
   let currentCardSide = 'right';
+
+  // Map SVG coordinates to viewport pixels using the element's current transform.
+  // Handles preserveAspectRatio correctly; call per-frame, not cached.
+  function svgToViewport(svgX, svgY) {
+    const pt = svgEl.createSVGPoint();
+    pt.x = svgX; pt.y = svgY;
+    const s = pt.matrixTransform(svgEl.getScreenCTM());
+    return { x: s.x, y: s.y };
+  }
 
   function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
 
@@ -694,13 +698,10 @@ function initPolicyTimeline() {
     const activeCardSide = 'right';
 
     if (!isMobileTimeline && activeIndex >= 0) {
-      const nodeScreenX = points[activeIndex].x * camScale + camTx;
-      const nodeScreenY = points[activeIndex].y * camScale + camTy;
       connector
         .style('display', null)
-        .attr('x1', nodeScreenX).attr('y1', nodeScreenY)
-        .attr('x2', W - 25)
-        .attr('y2', nodeScreenY);
+        .attr('x1', viewCenterX).attr('y1', H / 2)
+        .attr('x2', viewCenterX + CONNECTOR_LEN).attr('y2', H / 2);
     } else {
       connector.style('display', 'none');
     }
@@ -759,6 +760,8 @@ function initPolicyTimeline() {
 
     tlActiveCard = document.createElement('div');
     tlActiveCard.className = `policy-item ${currentCardSide} active`;
+    const vpAnchor = svgToViewport(viewCenterX + CONNECTOR_LEN, H / 2);
+    tlActiveCard.style.cssText = `position:fixed;left:${Math.round(vpAnchor.x + 10)}px;top:${Math.round(vpAnchor.y)}px;transform:translateY(-50%);right:auto;z-index:100;`;
     tlActiveCard.innerHTML = `
       <div class="policy-photo">📷 ${policy.title}</div>
       <div class="policy-card">
