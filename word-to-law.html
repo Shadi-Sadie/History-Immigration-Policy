@@ -647,7 +647,10 @@ function initPolicyTimeline() {
     laneLabels
       .attr('x', d => {
         const cameraX = d.x * camScale + camTx;
-        return d.overviewX + (cameraX - d.overviewX) * laneFollowT;
+        const targetX = laneFollowT === 1
+          ? Math.max(20, Math.min(W - 20, cameraX))
+          : cameraX;
+        return d.overviewX + (targetX - d.overviewX) * laneFollowT;
       })
       .style('opacity', d => {
         if (progress <= OVERVIEW_END) return 1;
