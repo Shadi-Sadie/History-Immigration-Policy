@@ -213,12 +213,12 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 
 .policy-item.left {
   left: 3%;
-  animation: fadeInCard 0.35s ease forwards;
+  
 }
 
 .policy-item.right {
   /* left/top set by JS from SVG anchor coordinates */
-  animation: fadeInCard 0.35s ease forwards;
+
 }
 
 @keyframes fadeInCard {
@@ -226,19 +226,51 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   to   { opacity: 1; transform: translateX(0); }
 }
 
+
 .policy-card {
-  background: var(--paper)
+  position: relative;
+  background: var(--paper);
   border: 2px solid var(--brass);
-  padding: 2rem;
+  padding: 2rem 2rem 2rem 3rem;
   border-radius: 8px;
   backdrop-filter: blur(10px);
   width: 100%;
   max-width: 370px;
-  font-family: 'Crimson Text', serif;
-  color: #f5f1e8;
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  color: var(--ink);
   box-shadow: 0 18px 42px rgba(0,0,0,0.3);
+  overflow: visible
 }
 
+.policy-side-bar {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 10px;
+  height: 100%;
+  background: var(--brass);
+  border-radius: 6px 0 0 6px;
+}
+
+.policy-icon {
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: var(--paper);
+  border: 2px solid var(--brass);
+  color: var(--brass);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.85rem;
+  font-family: Georgia, serif;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.18);
+  z-index: 3;
+}
 .policy-year {
   font-family: 'Space Mono', monospace;
   font-size: 0.75rem;
@@ -273,7 +305,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 .policy-description {
   font-size: 0.95rem;
   line-height: 1.7;
-  color: var(--ink-light);
+  color: var(--ink-mid);
   margin-bottom: 1.2rem;
   border-left: 2px solid rgba(212,165,116,0.3);
   padding-left: 1rem;
@@ -282,7 +314,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 .policy-impact {
   font-size: 0.9rem;
   line-height: 1.6;
-  color: rgba(245,241,232,0.8);
+  color: rgba(212,165,116,0.9);
   margin-bottom: 1rem;
   padding: 0.8rem;
   background: rgba(212,165,116,0.08);
@@ -354,6 +386,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 /* ── ERA HOLD SCREENS ────────────────────────────────────────────────── */
 /* Cover (screen 1) and text (screen 2) are two stacked 100vh panels     */
 /* driven by translateY; no opacity animation — scroll drives them.       */
+
+
 .era-hold-cover {
   position: fixed;
   inset: 0;
@@ -663,7 +697,7 @@ const POLICY_PATH_COLOR = '#c0a13a';
 
 // Traveler ship + canvas river configuration.
 const SHIP_SRC = 'images/boat.png';   // single source of truth — swap here to change the traveler image
-const SHIP_ANGLE_OFFSET = 90;          // degrees added to the path tangent to align the boat art with travel
+const SHIP_ANGLE_OFFSET = 45;          // degrees added to the path tangent to align the boat art with travel
 const CSS = getComputedStyle(document.documentElement);
 const RIVER_COLOR = CSS.getPropertyValue('--river').trim();
 const RIVER_W = 60;                    // river width in SVG units (path stroke is ~16)
@@ -787,7 +821,7 @@ const ERA_CAPTIONS = [
   'U.S.–Mexico border fence.',
 ];
 
-function updateEraPanel(eraIdx) {
+/*function updateEraPanel(eraIdx) {
   if (eraIdx < 0) {
     document.body.style.backgroundColor = '';
     return;
@@ -833,7 +867,7 @@ function updateEraPanel(eraIdx) {
     tlEraCounter.style.opacity = '1';
   }
 }
-
+*/
 function getPathDistanceToPoint(pathNode, len, point) {
   const pt = pathNode.getPointAtLength(len);
   const dx = pt.x - point.x;
@@ -905,7 +939,7 @@ function getNodePathLengths(pathNode, points, totalLen) {
 //   0.45 → 0.65  cover slides off top, text rises in   path hidden
 //   0.65 → 0.88  text holds full-screen                path hidden
 //   0.88 → 1.00  text slides off top                   path fades back in (0→1)
-function applyEraHold(coverEl, textEl, holdP) {
+/*function applyEraHold(coverEl, textEl, holdP) {
   if (!coverEl || !textEl) return;
 
   // Cover Y
@@ -935,6 +969,47 @@ function applyEraHold(coverEl, textEl, holdP) {
   }
 }
 
+*/
+
+function applyEraHold(cardEl, textEl, holdP) {
+  if (!cardEl) return;
+
+  let opacity;
+  let y;
+
+  if (holdP < 0.18) {
+    const p = holdP / 0.18;
+    opacity = p;
+    y = 40 - p * 40;
+  } else if (holdP < 0.78) {
+    opacity = 1;
+    y = 0;
+  } else {
+    const p = (holdP - 0.78) / 0.22;
+    opacity = 1 - p;
+    y = -40 * p;
+  }
+
+  cardEl.style.opacity = opacity;
+  cardEl.style.transform = `translate(-50%, ${y}px)`;
+
+  if (tlVizWrapper) {
+    tlVizWrapper.style.opacity = '1';
+  }
+}
+// ── POLICY TYPE ICONS ─────────────────────────────────────────────────
+function getPolicyIcon(type) {
+  const t = type.toLowerCase();
+
+  if (t.includes("law") || t.includes("act")) return "⚖";
+  if (t.includes("executive") || t.includes("order")) return "✦";
+  if (t.includes("court") || t.includes("decision")) return "§";
+  if (t.includes("treaty")) return "◆";
+  if (t.includes("constitutional") || t.includes("amendment")) return "★";
+  if (t.includes("agreement")) return "◈";
+
+  return "●";
+}
 // ── SCROLL-DRIVEN POLICY TIMELINE (GSAP ScrollTrigger) ─────────────────
 function initPolicyTimeline() {
   if (tlInitialized) return;
@@ -960,7 +1035,7 @@ function initPolicyTimeline() {
   const pathDataCenterX = W * 0.5;                            // path centered on full screen
   const tlXSpread = W * (isMobileTimeline ? 0.10 : 0.13);    // lane spread
   const viewCenterX = pathDataCenterX;                        // overview only; follow phase ignores X
-  const tlYSpan = H * (isMobileTimeline ? 3.2 : 6.0);
+  const tlYSpan = H * (isMobileTimeline ? 4.5 : 9.0); // vertical span of path in SVG units
   const bgPathWidth = isMobileTimeline ? 14 : 18;
   const animPathWidth = isMobileTimeline ? 12 : 16;
   const nodeRadius = isMobileTimeline ? 10 : 12;
@@ -970,7 +1045,7 @@ function initPolicyTimeline() {
   const activeYearSize = isMobileTimeline ? 18 : 28;
   const baseYearStrokeWidth = isMobileTimeline ? 2.5 : 3;
   const activeYearStrokeWidth = isMobileTimeline ? 3 : 4;
-  const SHIP_SIZE = isMobileTimeline ? 70 : 50;  // ship image edge in SVG units
+  const SHIP_SIZE = isMobileTimeline ? 110 : 85;  // ship image edge in SVG units
 
   // Build path points: x snaps to three editorial lanes, y encodes time.
   const points = policies.map((p, i) => {
@@ -1307,7 +1382,6 @@ function initPolicyTimeline() {
         }
         applyEraHold(tlEraHoldCover, tlEraHoldText, holdP);
         suppressCard = true;
-        connector.style('display', 'none');
         lastInHoldEra = inHoldEra;
       } else {
         if (lastInHoldEra >= 0) {
@@ -1326,21 +1400,15 @@ function initPolicyTimeline() {
           document.body.style.backgroundColor = eras[walkEraIdx].bg;
         }
         // Adaptive connector: direction matches card side
-        if (!isMobileTimeline && activeIndex >= 0) {
-          const activeLane = getPolicyDoorLane(policies[activeIndex]);
-          connector
-            .style('display', null)
-            .attr('stroke', `rgba(${LANE_RGB[activeLane]},0.65)`)
-            .attr('x1', shipX).attr('y1', H / 2)
-            .attr('x2', shipX + cardDir * CONNECTOR_LEN).attr('y2', H / 2);
-        } else {
-          connector.style('display', 'none');
-        }
+// No connector line
+connector.style('display', 'none');
       }
     } else {
       // overview / zoom: no card, no connector
       connector.style('display', 'none');
     }
+
+// Node cosmetics — only re-apply when...
 
     // Node cosmetics — only re-apply when (activeIndex, passedIndex) change.
     const nodeStateDirty = activeIndex !== tlLastActiveIndex || passedIndex !== tlLastPassedIndex;
@@ -1427,20 +1495,34 @@ function initPolicyTimeline() {
     if (tlActivePhoto) { tlActivePhoto.remove(); tlActivePhoto = null; }
 
     // Adaptive card placement: opens-lane nodes put card to the left
-    const CARD_WIDTH = 340;
-    const connectorEndX = shipX + cardDir * CONNECTOR_LEN;
-    const vpAnchor  = svgToViewport(connectorEndX, H / 2);
+    const CARD_WIDTH = 360;
+    const CARD_GAP = 400;
+    const EDGE_MARGIN = 40;
+
+    const nodeVp = svgToViewport(shipX, H / 2);
+
     const rawLeft   = cardDir === 1
-      ? Math.round(vpAnchor.x + 10)
-      : Math.round(vpAnchor.x - 10 - CARD_WIDTH);
-    const cardLeft  = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, rawLeft));
+      ? nodeVp.x + CARD_GAP
+      : nodeVp.x - CARD_GAP - CARD_WIDTH;
+
+    const cardLeft  = Math.max(EDGE_MARGIN, Math.min(window.innerWidth - CARD_WIDTH - EDGE_MARGIN, rawLeft));
 
     tlActiveCard = document.createElement('div');
     tlActiveCard.className = 'policy-item right active';
-    tlActiveCard.style.cssText = `position:fixed;left:${cardLeft}px;top:0;z-index:100;width:${CARD_WIDTH}px;max-height:calc(100vh - 40px);overflow-y:auto;`;
-    tlActiveCard.innerHTML = `
+tlActiveCard.style.cssText = `
+  position:fixed;
+  left:${cardLeft}px;
+  top:0;
+  z-index:100;
+  width:${CARD_WIDTH}px;
+  max-height:calc(100vh - 60px);
+  overflow-y:auto;
+`;    tlActiveCard.innerHTML = `
       ${policy.image ? `<img class="policy-photo" src="${policy.image}" alt="${policy.title}" loading="lazy">` : ''}
-      <div class="policy-card">
+        <div class="policy-card">
+            <div class="policy-side-bar">
+               <span class="policy-icon">${getPolicyIcon(policy.type)}</span>
+        </div>
         <div class="policy-year">${policy.year}</div>
         <div class="policy-title">${policy.title}</div>
         <div class="policy-type">${policy.type}</div>
@@ -1450,10 +1532,29 @@ function initPolicyTimeline() {
       </div>`;
     document.body.appendChild(tlActiveCard);
 
+          gsap.fromTo(
+      tlActiveCard,
+      {
+        opacity: 0,
+        x: cardDir === 1 ? 12 : -12,
+        y: 18,
+        scale: 0.97,
+        filter: "blur(4px)"
+      },
+      {
+        opacity: 1,
+        x: 0,
+        y: 0,
+        scale: 1,
+        filter: "blur(0px)",
+        duration: 0.75,
+        ease: "power3.out"
+      }
+    );
     // Vertical placement: center card on node, clamp so title stays on screen
     const vMargin = 20;
     const cardH = tlActiveCard.offsetHeight;
-    const nodeY = vpAnchor.y;
+    const nodeY = nodeVp.y;    
     let topPx;
     if (cardH >= window.innerHeight - vMargin * 2) {
       topPx = vMargin;
@@ -1495,7 +1596,7 @@ function initPolicyTimeline() {
     eraHoldTimes[h] = { tStart, tEnd: tlMasterTl.duration() };
     const walkEnd = (h < eras.length - 1) ? eras[h + 1].startIndex : era.endIndex;
     for (let i = era.startIndex; i < walkEnd; i++) {                        // node-by-node, 1 slot each
-      tlMasterTl.to(nav, { frac: nodeFrac[i + 1], duration: 1, ease: smoother });
+      tlMasterTl.to(nav, { frac: nodeFrac[i + 1], duration: 1.8, ease: "power2.inOut" });
     }
   });
 
@@ -1507,7 +1608,7 @@ function initPolicyTimeline() {
     trigger: containerEl,
     start: 'top top',
     end: 'bottom bottom',
-    scrub: true,
+    scrub: 1.2,
     animation: tlMasterTl,
     onToggle: self => {
       tlSectionEl.classList.toggle('is-active', self.isActive);
