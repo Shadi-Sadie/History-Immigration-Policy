@@ -1,0 +1,1562 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<title>From the Word to the Law</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono&display=swap" rel="stylesheet">
+<style>
+:root {
+  --ink:       #24211d;
+  --ink-mid:   #5f5a52;
+  --ink-soft:  #8d867b;
+  --ink-faint: #d8cfbf;
+
+  --paper:     #f7f3eb;
+  --paper-mid: #eee7dc;
+  --rule:      #d8cfbf;
+
+  --brass:     #a8843a;
+  --blue:      #56718a;
+  --red:       #a35e50;
+  --green:     #5f7e67;
+  --river:      #38afcd;
+  --serif: 'Lora', Georgia, serif;
+  --body:  'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+
+}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+/* Native smooth-scroll is OFF: GSAP ScrollTrigger reads the real scroll position. */
+html{scroll-behavior:auto;}
+body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:17px;font-weight:400;line-height:1.6;min-height:100vh;transition:background-color 0.9s ease;}
+.page{max-width:620px;margin:0 auto;padding:0 1.25rem;}
+
+.policy-history-section {
+  position: relative;
+  background: linear-gradient(var(--paper) 0%, var(--paper-mid) 100%);
+  color: var(--ink);
+}
+
+.tl-intro-section {
+  position: relative;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  z-index: 50;
+  background: linear-gradient(180deg, var(--paper) 0%,  var(--paper-mid) 100%);
+  color: #f5f1e8;
+  font-family: 'Crimson Text', serif;
+}
+
+.tl-intro-inner {
+  max-width: 880px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+  opacity: 0;
+  transform: translateY(24px);
+  transition: opacity 0.9s ease, transform 0.9s ease;
+}
+
+.tl-intro-inner.is-visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tl-section-pre {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(147,160,181,0.45);
+  margin-bottom: 1rem;
+}
+
+.tl-section-eye {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.72rem;
+  letter-spacing: 0.24em;
+  text-transform: uppercase;
+  color: #d8a13a;
+  margin-bottom: 1.4rem;
+}
+
+.tl-intro-title {
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(2.2rem, 6vw, 4.6rem);
+  line-height: 1.12;
+  margin-bottom: 1.3rem;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.tl-intro-sub {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
+  color: #93a0b5;
+  max-width: 30ch;
+  margin: 0 auto;
+  line-height: 1.5;
+}
+
+@keyframes scrollCuePulse {
+  0%, 100% { transform: scaleY(0.4); opacity: 0.4; }
+  50%       { transform: scaleY(1);   opacity: 1; }
+}
+
+.tl-scroll-cue {
+  position: absolute;
+  bottom: 2rem;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.tl-scroll-label {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: #93a0b5;
+}
+
+.tl-scroll-line {
+  width: 1px;
+  height: 34px;
+  background: #93a0b5;
+  animation: scrollCuePulse 1.8s ease-in-out infinite;
+  transform-origin: top;
+}
+
+.tl-timeline-container {
+  position: relative;
+  min-height: 1200vh;
+  background: linear-gradient(180deg, var(--paper) 0%, var(--paper-mid) 100%);
+}
+
+.tl-viz-wrapper {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100vh;
+  z-index: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.55s ease;
+}
+
+.policy-history-section.is-active .tl-viz-wrapper {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* Canvas river — flat blue water band behind the SVG path. */
+.tl-river {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 0;
+  pointer-events: none;
+}
+
+#timeline-viz {
+  position: relative;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  
+}
+
+/* Hide the SVG path graphics — keep them only for GSAP/path measurements */
+.tl-bg-path,
+.tl-overview-bg,
+.tl-seg-path,
+.tl-anim-path {
+  opacity: 0;
+}
+/* completion state — all policies traversed */
+@keyframes completionPulse {
+  0%,100% { opacity: 0.7; }
+  50%      { opacity: 1; }
+}
+.tl-viz-wrapper.tl-complete #timeline-viz {
+  animation: completionPulse 2.4s ease-in-out infinite;
+}
+
+/* policy cards — appended to body during timeline */
+.policy-item {
+  position: fixed;
+  z-index: 100;
+  transform: translateY(-50%);
+  opacity: 0;
+  pointer-events: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.policy-item.active {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+.policy-item.left {
+  left: 3%;
+  animation: fadeInCard 0.35s ease forwards;
+}
+
+.policy-item.right {
+  /* left/top set by JS from SVG anchor coordinates */
+  animation: fadeInCard 0.35s ease forwards;
+}
+
+@keyframes fadeInCard {
+  from { opacity: 0; transform: translateX(12px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+
+.policy-card {
+  background: var(--paper)
+  border: 2px solid var(--brass);
+  padding: 2rem;
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  width: 100%;
+  max-width: 370px;
+  font-family: 'Crimson Text', serif;
+  color: #f5f1e8;
+  box-shadow: 0 18px 42px rgba(0,0,0,0.3);
+}
+
+.policy-year {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  color: var(--brass);
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+  font-weight: 700;
+}
+
+.policy-title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin-bottom: 0.8rem;
+  color: var(--ink-mid);
+  line-height: 1.3;
+}
+
+.policy-type {
+  display: inline-block;
+  font-size: 0.7rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 3px;
+  margin-bottom: 1.2rem;
+  font-weight: 700;
+  letter-spacing: 1px;
+  background: rgba(212,165,116,0.15);
+  color: #d4a574;
+  text-transform: uppercase;
+}
+
+.policy-description {
+  font-size: 0.95rem;
+  line-height: 1.7;
+  color: var(--ink-light);
+  margin-bottom: 1.2rem;
+  border-left: 2px solid rgba(212,165,116,0.3);
+  padding-left: 1rem;
+}
+
+.policy-impact {
+  font-size: 0.9rem;
+  line-height: 1.6;
+  color: rgba(245,241,232,0.8);
+  margin-bottom: 1rem;
+  padding: 0.8rem;
+  background: rgba(212,165,116,0.08);
+  border-radius: 4px;
+}
+
+.policy-impact strong {
+  font-weight: 700;
+}
+
+.policy-note {
+  font-size: 0.85rem;
+  line-height: 1.6;
+  color: rgba(212,165,116,0.8);
+  font-style: italic;
+  border-top: 1px solid rgba(212,165,116,0.2);
+  padding-top: 1rem;
+  margin-top: 1rem;
+}
+
+.policy-photo {
+  width: 100%;
+  max-width: 360px;
+  border: 2px solid rgba(212,165,116,0.6);
+  border-radius: 8px;
+  box-shadow: 0 12px 32px rgba(0,0,0,0.4);
+  display: block;
+  aspect-ratio: 4/3;
+  object-fit: cover;
+  object-position: center top;
+}
+
+@media(max-width:768px) {
+  .tl-intro-title { font-size: clamp(1.8rem, 8vw, 2.6rem); }
+  .tl-intro-sub {
+    font-size: 1rem;
+    max-width: 24rem;
+    line-height: 1.65;
+    padding: 0 1rem;
+  }
+  .tl-intro-hint { margin-top: 2rem; }
+  .tl-timeline-container { min-height: 950vh; }
+  .policy-card,.policy-photo { max-width: 90vw; }
+  .policy-item.left  { left: 2%; }
+  /* .right position set by JS on tablet — keep right fallback only on small screens */
+  .tl-viz-wrapper { width: 100%; height: 100vh; }
+  .era-cover-title { font-size: 2rem; }
+  .era-cover-inner { padding: 0 1.5rem 2.5rem; }
+  .era-hold-text-inner { padding: 3rem 1.5rem; }
+}
+
+@media(max-width:640px) {
+  .policy-item.right {
+    left: 50%;
+    right: auto;
+    top: auto;
+    bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
+    transform: translateX(-50%);
+  }
+  .policy-card {
+    max-height: 52vh;
+    overflow: auto;
+    padding: 1.1rem 1rem 1rem;
+  }
+  .policy-photo { display: none; }
+  .policy-item.right.active { animation: none; }
+}
+
+/* ── ERA HOLD SCREENS ────────────────────────────────────────────────── */
+/* Cover (screen 1) and text (screen 2) are two stacked 100vh panels     */
+/* driven by translateY; no opacity animation — scroll drives them.       */
+.era-hold-cover {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 201;
+  display: flex;
+  align-items: flex-end;
+  justify-content: flex-start;
+  overflow: hidden;
+  will-change: transform;
+}
+.era-hold-text {
+  position: fixed;
+  inset: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 200;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  overflow-y: auto;
+  will-change: transform;
+}
+.era-hold-text-inner {
+  max-width: 900px;
+  width: 100%;
+  padding: 5rem 3rem;
+}
+.era-counter {
+  position: fixed;
+  top: 1.5rem;
+  left: 2rem;
+  z-index: 300;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.2em;
+  text-transform: uppercase;
+  color: rgba(212,165,116,0.85);
+  pointer-events: none;
+  transition: opacity 0.3s ease;
+}
+@keyframes pulseEntry {
+  0%   { transform: scale(1);   filter: drop-shadow(0 0 12px rgba(192,161,58,0.6)); }
+  35%  { transform: scale(1.7); filter: drop-shadow(0 0 30px rgba(192,161,58,1)); }
+  70%  { transform: scale(1.2); filter: drop-shadow(0 0 18px rgba(192,161,58,0.8)); }
+  100% { transform: scale(1);   filter: drop-shadow(0 0 20px rgba(192,161,58,0.9)); }
+}
+.pulse-entry { animation: pulseEntry 0.75s ease-out forwards; }
+
+/* Cover inner elements — reused from old era cover markup */
+.era-cover-bg {
+  position: absolute;
+  inset: 0;
+  background-size: cover;
+  background-position: center;
+}
+.era-cover-scrim {
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    to top,
+    rgba(0,0,0,1) 0%,
+    rgba(0,0,0,0.45) 35%,
+    rgba(0,0,0,0.18) 60%,
+    rgba(0,0,0,0.52) 100%
+  );
+}
+.era-cover-inner {
+  position: relative;
+  z-index: 1;
+  text-align: left;
+  max-width: 760px;
+  padding: 0 4rem 3.5rem;
+  width: 100%;
+}
+.era-cover-rule {
+  display: block;
+  width: 64px;
+  height: 2px;
+  background: #c0a13a;
+  margin-bottom: 1.4rem;
+}
+.era-cover-eyebrow {
+  display: block;
+  font-family: 'Space Mono', monospace;
+  font-size: 0.62rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: rgba(212,165,116,0.85);
+  margin-bottom: 1rem;
+}
+.era-cover-title {
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(2.6rem, 5.5vw, 4.8rem);
+  font-weight: 700;
+  color: #f5f1e8;
+  line-height: 1.1;
+  margin-bottom: 1.5rem;
+}
+.era-cover-caption {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.04em;
+  color: rgba(245,241,232,0.45);
+  line-height: 1.6;
+}
+
+/* Era narrative text styles — used inside .era-hold-text-inner */
+.era-text-eyebrow {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.65rem;
+  letter-spacing: 0.22em;
+  text-transform: uppercase;
+  color: #d4a574;
+  margin-bottom: 1.4rem;
+}
+.era-narrative-heading {
+  font-family: 'Crimson Text', serif;
+  font-size: clamp(1.2rem, 1.7vw, 1.55rem);
+  font-weight: 700;
+  color: #f5f1e8;
+  line-height: 1.15;
+  margin-bottom: 0.35rem;
+}
+.era-narrative-date {
+  font-family: 'Space Mono', monospace;
+  font-size: 0.58rem;
+  letter-spacing: 0.15em;
+  text-transform: uppercase;
+  color: rgba(212,165,116,0.75);
+  margin-bottom: 1.1rem;
+}
+.era-text-body {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: clamp(1.1rem, 1.35vw, 1.3rem);
+  line-height: 1.8;
+  color: #f5f1e8;
+}
+.era-text-body p { margin-bottom: 1rem; }
+.era-text-body p:first-of-type::first-letter {
+  font-family: 'DM Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-size: 3.8em;
+  font-weight: 700;
+  color: #d4a574;
+  float: left;
+  line-height: 0.72;
+  margin-right: 0.06em;
+  margin-top: 0.08em;
+}
+</style>
+</head>
+<body>
+
+<div id="policy-history" class="policy-history-section">
+  <div class="tl-intro-section">
+    <div class="tl-intro-inner">
+      <p class="tl-section-pre">From the word to the law</p>
+      <p class="tl-section-eye">Chapter II · 1921 – 1965</p>
+      <h2 class="tl-intro-title">Drawing the Map of Who Belongs</h2>
+      <p class="tl-intro-sub">In 1924, Congress did something new: it assigned the nation a preferred ancestry, and wrote it into a formula.</p>
+    </div>
+    <div class="tl-scroll-cue">
+      <span class="tl-scroll-label">Scroll</span>
+      <div class="tl-scroll-line"></div>
+    </div>
+  </div>
+  <div class="tl-timeline-container">
+    <div class="tl-viz-wrapper">
+      <canvas id="river-canvas" class="tl-river"></canvas>
+      <svg id="timeline-viz" viewBox="0 0 1200 800"></svg>
+    </div>
+  </div>
+</div>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/MotionPathPlugin.min.js"></script>
+<script>
+const policies = [
+  // lean: -1 = maximally restrictive, +1 = maximally expansive
+  // ── Era 1: The Colonial Period ──────────────────────────────────────
+  { lean: -0.50, year: "1600s–1770s", title: "Colonial Settlement", type: "Local/Colonial Administrative Laws", description: "European settlers sought economic and political freedom while forced migrants—enslaved Africans and indentured servants—had no choice. Colonies offered land grants and quick naturalization to attract labor, while also using head taxes and banishment to deter the poor and religious minorities.", impact: "Set foundation for race-based hierarchy and selective belonging in America.", note: "Quick naturalization incentivized settlement but excluded non-Europeans.", image: "images/pic1.png" },
+  { lean:  0.65, year: "1740", title: "Plantation Act", type: "Law (British Parliament)", description: "Passed by the British Parliament to apply to the American colonies, this law established a uniform seven-year naturalization path for non-Catholic foreign settlers, with special exemptions for Jews and Quakers.", impact: "First broad framework for turning colonial immigrants into British subjects.", note: "Explicitly excluded Catholics, reflecting the era’s religious and political anxieties." },
+  // ── Era 2: The Early Republic & Expansion ───────────────────────────
+  { lean: -0.70, year: "1790", title: "Naturalization Act", type: "Law", description: "First federal naturalization law established citizenship exclusively for ‘free white persons’ of good moral character after 2 years of residency.", impact: "Written racial exclusion became federal law from the nation’s first days.", note: "Non-whites, indentured servants, and enslaved people categorically barred.", image: "images/pic2.png" },
+  { lean: -0.80, year: "1798", title: "Alien and Sedition Acts", type: "Laws", description: "Residency requirement for naturalization jumped from 5 to 14 years. President granted sweeping power to arrest and deport ‘dangerous’ aliens without due process.", impact: "Turned immigration enforcement into a political weapon.", note: "Targeted noncitizens from ‘hostile nations’ and anyone deemed a threat.", image: "images/pic3.png" },
+  { lean: -0.20, year: "1808", title: "Slave Trade Prohibition", type: "Law", description: "Federal law banned the transatlantic slave trade, effective January 1, 1808. However, enslavement itself continued and the institution was never addressed.", impact: "Slavery remained legal; enslaved people stayed ineligible for citizenship.", note: "Weak enforcement allowed illegal smuggling for decades.", image: "images/pic4.png" },
+  { lean: -0.15, year: "1819", title: "Steerage Act", type: "Law", description: "Established the first continual federal tracking of immigration by requiring ship captains to deliver passenger manifests to customs authorities. Also regulated ship conditions to limit overcrowding.", impact: "Created the first systematic federal record of immigrant arrivals.", note: "Indirectly restrictive: by limiting ship capacity, it raised fares and priced out poorer immigrants." },
+  { lean: -0.95, year: "1857", title: "Dred Scott v. Sandford", type: "Court Decision", description: "Supreme Court ruled that no Black person—enslaved or free—could be a US citizen. Chief Justice Taney declared Blacks had ‘no rights which the white man was bound to respect.’", impact: "Stripped citizenship from free Black Americans.", note: "Directly precipitated Civil War tensions. Overturned 87 years later.", image: "images/pic5.png" },
+  { lean:  0.70, year: "1862–1864", title: "Homestead & Contract Labor Acts", type: "Laws", description: "Passed during the Civil War to spur western development. The Homestead Act offered free land to citizens and immigrants who declared intention to naturalize. The Contract Labor Act allowed employers to pay immigrants’ passage in exchange for contracted labor.", impact: "Accelerated westward settlement and created large-scale labor recruitment pipelines.", note: "Contract labor provisions were later seen as a form of debt bondage and repealed in 1885." },
+  { lean:  0.85, year: "1868", title: "14th Amendment", type: "Constitutional Amendment", description: "Birthright citizenship established for all persons born or naturalized in the US, regardless of race. This overturned Dred Scott and extended citizenship to freed enslaved people.", impact: "Citizenship based on birth, not race.", note: "Racial bars for naturalization of immigrants remained until 1952.", image: "images/pic6.webp" },
+  { lean:  0.75, year: "1868", title: "Burlingame-Seward Treaty", type: "Treaty", description: "This treaty with China secured the legal right of Chinese citizens to emigrate to the United States, recognizing the mutual advantage of free migration—though it did not grant them naturalization rights.", impact: "Enabled large-scale Chinese immigration to fuel railroad construction and labor markets.", note: "Undermined and ultimately superseded by the Chinese Exclusion Act of 1882." },
+  // ── Era 3: Federal Control & Qualitative Exclusion ──────────────────
+  { lean: -0.60, year: "1875", title: "Page Act", type: "Law", description: "The first federal law to exclude specific ‘undesirable’ classes of immigrants, banning entry of foreign criminals, prostitutes, and Asian contract laborers. Established port inspections and required ship manifests.", impact: "Created bureaucratic apparatus for federal exclusion.", note: "In practice, heavily targeted Chinese women on the presumption of prostitution." },
+  { lean: -0.95, year: "1882", title: "Chinese Exclusion Act", type: "Laws", description: "Suspended Chinese laborers’ entry for 10 years (later made indefinite). Chinese immigrants explicitly barred from naturalization. Imposed head tax and mandated deportation.", impact: "First US law to exclude an entire nationality by race.", note: "Remained the most restrictive immigration law until 1924." },
+  { lean: -0.50, year: "1891", title: "Immigration Act", type: "Law", description: "Established the Bureau of Immigration. Expanded grounds for exclusion: polygamists, contagious disease, felons. Deportation possible within 1 year of unlawful entry.", impact: "Centralized federal immigration control.", note: "Gave immigration inspectors final authority with minimal due process." },
+  { lean: -0.65, year: "1907", title: "Gentlemen’s Agreement", type: "Executive/Diplomatic Agreement", description: "An informal agreement between the Roosevelt administration and Japan where Japan agreed to restrict passports for Japanese laborers heading to the US, avoiding the need for a formal exclusionary law.", impact: "Effectively ended Japanese labor immigration without the diplomatic costs of formal exclusion.", note: "Japan’s willingness to self-restrict came from fear of a more humiliating formal exclusion law." },
+  { lean: -0.65, year: "1917", title: "Literacy Act", type: "Law", description: "Enacted over a presidential veto, imposed a literacy test for immigrants over 16 and created the ‘Asiatic Barred Zone,’ effectively banning most immigration from the Asia-Pacific region.", impact: "Drastically reduced immigration from Southern and Eastern Europe and virtually all of Asia.", note: "Head tax raised to $8—enormous sum for poor immigrants." },
+  // ── Era 4: The National Origins Quota System ─────────────────────────
+  { lean: -0.90, year: "1921–1924", title: "Emergency Quota & National Origins Acts", type: "Laws", description: "These acts fundamentally closed the open door by instituting strict numerical caps based on national origin. The 1924 Act limited annual quotas to 2% of a nationality’s US population as of the 1890 census, deliberately favoring Northwestern Europeans and completely barring all Asians.", impact: "Codified racist hierarchy in law. Created the US Border Patrol.", note: "Remained in effect until 1965. Explicitly intended to maintain Anglo-Saxon dominance." },
+  { lean: -0.75, year: "1930", title: "LPC Clause Executive Order", type: "Executive Order", description: "President Hoover directed consular officers to strictly enforce the ‘Likely to become a Public Charge’ (LPC) clause, creating a massive administrative barrier that slashed legal immigration without requiring new legislation.", impact: "Immigration from Europe dropped by over 90% almost overnight.", note: "A lesson in how enforcement discretion can effectively close the border without changing the law." },
+  { lean: -0.55, year: "1940", title: "Alien Registration Act", type: "Law", description: "All aliens over 14 required to register and be fingerprinted. Targeted Communists, Fascists, and Nazis. Made alien smuggling a crime.", impact: "Massive surveillance apparatus during WWII.", note: "Set precedent for wartime immigration control." },
+  { lean: -1.00, year: "1942", title: "Japanese American Internment", type: "Executive Order", description: "120,000+ people of Japanese descent—two-thirds US citizens—forcibly removed and incarcerated without charges or trial in 10 War Relocation Authority camps.", impact: "Citizenship offered zero protection.", note: "Upheld by Supreme Court in Korematsu v. US (1944). Redress in 1988." },
+  { lean:  0.05, year: "1942–1964", title: "Bracero Program", type: "Executive Agreement", description: "Originating as an executive agreement with Mexico to solve WWII labor shortages, this policy opened a back door for millions of temporary Mexican agricultural workers, but restricted them from permanent integration or citizenship.", impact: "Over 4.5 million Mexican laborers entered under the program. Set the template for guest-worker policy.", note: "The program ended amid widespread reports of labor exploitation and substandard conditions." },
+  { lean:  0.15, year: "1943", title: "Magnuson Act", type: "Law", description: "Repealed the Chinese Exclusion Act and allowed limited immigration. Chinese, Indians, and Filipinos finally eligible for naturalization, but under tiny national quotas of just 105 per year.", impact: "First crack in racial bars—though largely a symbolic gesture driven by WWII alliance needs.", note: "Still excluded large numbers. A response to the Chinese alliance during WWII." },
+  { lean:  0.70, year: "1945–1948", title: "Truman Directive & Displaced Persons Act", type: "Presidential Directive & Law", description: "President Truman used executive authority to prioritize European displaced persons within existing quotas. The 1948 Law then allowed over 200,000 refugees fleeing Nazi and Soviet persecution to enter outside normal limits.", impact: "Set the precedent for the US taking a leading role in refugee resettlement.", note: "The 1948 law was criticized for favoring Baltic states over Jewish Holocaust survivors." },
+  { lean:  0.05, year: "1952", title: "McCarran-Walter Act", type: "Law", description: "Passed over President Truman’s veto, formally abolished all racial barriers to naturalization but preserved the discriminatory national-origins quota system and created stringent new deportation criteria targeting suspected communists.", impact: "End of explicit racial bars to naturalization—but Cold War restrictions kept the door mostly shut.", note: "Truman’s veto message called it ‘un-American.’ Congress overrode it." },
+  // ── Era 5: The 1965 Paradigm Shift ──────────────────────────────────
+  { lean:  0.90, year: "1965", title: "Hart-Celler Act", type: "Law", description: "Abolished the racist national origins quota system and replaced it with a preference system prioritizing family reunification and skilled labor. Concurrently established the first-ever numerical cap on Western Hemisphere immigration, inadvertently criminalizing historic labor migrations from Mexico.", impact: "Landmark civil rights era legislation. Dramatically shifted the national origins of US immigrants.", note: "Sponsors predicted it would not change the ethnic composition of the country. They were wrong." },
+  { lean:  0.65, year: "1975", title: "Indochina Refugee Act", type: "Executive Action", description: "130,000+ Vietnamese, Cambodian, and Laotian refugees admitted following the fall of Saigon and Khmer Rouge takeover. Used emergency parole authority to bypass normal quotas.", impact: "Federal resettlement funding provided to states. Set stage for formal asylum system.", note: "Demonstrated US Cold War commitment. Exposed the gaps in the existing ad hoc refugee system." },
+  { lean:  0.60, year: "1980", title: "Refugee Act", type: "Law", description: "Created a permanent, systematic procedure for admitting refugees fleeing persecution and established a formal domestic resettlement and asylum framework aligned with UN protocols.", impact: "Created legal framework for asylum. Separated refugee admissions from regular immigration caps.", note: "Passed in the wake of the Vietnamese refugee crisis, which exposed the gaps in the existing system." },
+  { lean:  0.55, year: "1986", title: "Immigration Reform and Control Act", type: "Law", description: "Amnestied nearly 3 million undocumented immigrants present since 1982. Simultaneously imposed employer sanctions and increased Border Patrol by 50%.", impact: "Only comprehensive legalization in modern US history.", note: "Employer sanctions spawned document fraud industry. The enforcement provisions were chronically underfunded." },
+  { lean:  0.80, year: "1990", title: "Immigration Act of 1990", type: "Law", description: "Raised the overall immigration cap to 675,000 annually, created H-1B and H-2B visas for skilled and seasonal workers, established Temporary Protected Status (TPS), and created the Diversity Visa Lottery to admit immigrants from underrepresented nations.", impact: "Substantially expanded legal immigration channels and created the modern high-skilled visa framework.", note: "The Diversity Lottery and TPS were seen as a compromise to secure bipartisan support." },
+  { lean: -0.60, year: "1994", title: "Operation Gatekeeper", type: "Executive/Enforcement Action", description: "Massively expanded border fencing and surveillance, especially San Diego. The ‘prevention through deterrence’ strategy intentionally pushed crossings into deadlier desert terrain.", impact: "Thousands died in subsequent years. Shifted crossing patterns to Arizona and Texas.", note: "Part of broader militarization of southern border." },
+  { lean: -0.80, year: "1996", title: "IIRIRA, AEDPA, & PRWORA", type: "Laws", description: "IIRIRA created 3- and 10-year bars for unlawful presence and mandated expedited removal. AEDPA expanded ‘aggravated felonies’ to retroactively mandate deportation. PRWORA barred most legal immigrants from federal welfare programs for five years.", impact: "Launched the era of mass deportation infrastructure. Retroactive provisions swept up long-term residents.", note: "Applied retroactively. Passed in a bipartisan wave; their effects continue to be litigated." },
+  // ── Era 6: National Security and Executive Action ────────────────────
+  { lean: -0.85, year: "2001–2002", title: "PATRIOT Act & Homeland Security Act", type: "Laws", description: "The Patriot Act broadened terrorism-related inadmissibility grounds. The Homeland Security Act dissolved the INS and moved immigration enforcement into the newly created Department of Homeland Security, under ICE, CBP, and USCIS.", impact: "Transformed immigration into a national security issue. Created the modern enforcement apparatus.", note: "The restructuring separated enforcement (ICE/CBP) from services (USCIS), embedding a punitive orientation." },
+  { lean:  0.25, year: "2012", title: "DACA", type: "Executive Action", description: "Executive action granted temporary reprieve and work permits to ~700,000 unauthorized immigrants brought as children. No path to citizenship; revocable by any subsequent administration.", impact: "First positive action for undocumented immigrants in decades.", note: "Its revocability is the point: every subsequent administration has used it as a political bargaining chip." },
+  { lean: -0.90, year: "2017–2018", title: "Travel Ban & Family Separation", type: "Executive Orders", description: "Executive travel ban on multiple predominantly Muslim countries (upheld by Supreme Court). Zero tolerance policy criminally prosecuted all border crossers; ~5,500 children separated from parents.", impact: "Most controversial immigration policies in recent US history.", note: "Thousands of children traumatized. Reunification efforts continued for years." },
+  { lean: -0.70, year: "2020", title: "COVID-19 Pandemic Restrictions", type: "Executive Orders", description: "Citing the pandemic and economic recession, the administration virtually halted the issuance of green cards to individuals abroad and slashed the issuance of temporary nonimmigrant visas and refugee admissions to historic lows.", impact: "Immigration processing ground nearly to a halt. Backlogs created persist years later.", note: "Critics noted that the economic restrictions were broader than pandemic necessity required." }
+];
+
+const eras = [
+  { id: "era-1", title: "The Colonial Period",
+    intro: "Belonging was decided before there was a country to belong to.",
+    startIndex: 0,  endIndex: 1,  bg: "#241a12",
+    narrative: `<h3 class="era-narrative-heading">Building a Population</h3>
+<p class="era-narrative-date">Before 1790</p>
+<p>The first immigration problem in America was not how to keep people out. It was how to persuade them to come.</p>
+<p>Seventeenth-century North America was rich in land and poor in labor. Colonial governments competed with one another to attract settlers who could farm fields, build towns, defend frontiers, and grow local economies. To do that, they offered incentives: land grants, reduced taxes, debt relief, and unusually accessible paths to local citizenship.</p>
+<p>The colonies were remarkably diverse in how they handled newcomers. Some encouraged immigration aggressively. Others worried about becoming responsible for poor migrants, religious dissenters, or people considered likely to become public burdens. Towns imposed head taxes, required financial bonds, and sometimes expelled unwanted arrivals altogether.</p>
+<p>At the same time, migration to colonial America was never entirely voluntary. Britain transported convicted criminals across the Atlantic, while hundreds of thousands of Africans were forced into the colonies through the transatlantic slave trade. By the eighteenth century, free settlers, indentured servants, transported convicts, and enslaved people all lived within the same imperial system while occupying radically different legal positions.</p>
+<p>As migration increased, another question emerged: when did a newcomer stop being a foreigner?</p>
+<p>Naturalization rules varied from colony to colony until Parliament intervened with the Plantation Act of 1740. Seeking to encourage settlement throughout British America, the law created a relatively simple path for many non-Catholic immigrants to become British subjects after seven years of residence. Jews and Quakers received special accommodations. Catholics were largely excluded.</p>
+<p>For the first time, a broad framework existed for turning immigrants into members of the political community.</p>
+<p>Then came the American Revolution.</p>
+<p>The Declaration of Independence accused King George III of obstructing population growth in the colonies by refusing laws that would encourage naturalization and immigration. Among the grievances listed against the Crown was his effort to prevent the colonies from attracting new settlers. Immigration had become more than a local administrative matter; it was now tied to questions of self-government and sovereignty.</p>
+<p>When independence arrived, the new United States inherited a population built through migration but lacked a national answer to a fundamental question: who could become an American citizen?</p>` },
+  { id: "era-2", title: "The Early Republic & Expansion",
+    intro: "Race wasn't a side effect of American immigration law. It was the foundation.",
+    startIndex: 2,  endIndex: 9,  bg: "#2b1518",
+    narrative: `<p>After independence, the United States faced a question the colonies had never needed to answer for themselves: who could become an American citizen?
+Congress provided its first answer in 1790. The Naturalization Act allowed citizenship for "free white persons" who met residency requirements. The law was short, but it established a principle that would shape American immigration and citizenship policy for generations. The new republic welcomed immigrants, but not everyone stood on equal footing when it came to joining the political community.
+For much of the nineteenth century, immigration expanded rapidly. Millions of newcomers arrived from Ireland, Germany, and elsewhere in Europe. Their arrival transformed cities, fueled economic growth, and provoked fierce political backlash. Nativist movements warned that immigrants—particularly Catholics—would undermine American institutions. The Know-Nothing Party rose to national prominence by demanding restrictions on foreign influence and longer paths to citizenship.
+Then the Civil War reshaped the constitutional landscape.
+In 1868, the Fourteenth Amendment declared that anyone born in the United States was a citizen. Two years later, Congress expanded naturalization eligibility beyond white immigrants to include people of African descent. Yet many questions remained unresolved. Native Americans generally remained outside the citizenship framework, and immigrants from Asia found themselves excluded from the expanding definition of American membership.
+As railroads pushed westward and the American economy grew, Chinese laborers became essential to development across the Pacific Coast. At the same time, anti-Chinese sentiment intensified. Economic downturns, labor competition, and racial hostility combined into a powerful political movement demanding federal action.
+In 1882, Congress passed the Chinese Exclusion Act, suspending the immigration of Chinese laborers and barring a pathway that had previously remained open. For the first time, the federal government excluded an entire nationality from immigration on a large scale.
+The question was no longer simply who could become a citizen. Increasingly, Americans were asking who should be allowed to enter at all.</p>` },
+  { id: "era-3", title: "Federal Control & Qualitative Exclusion",
+    intro: "The federal government built the machinery of exclusion, piece by piece.",
+    startIndex: 10, endIndex: 14, bg: "#1c1f26",
+    narrative: `<p>Once Congress began restricting immigration, the next question followed naturally: how far should those restrictions go?
+The federal government steadily expanded its role. New immigration stations processed arrivals at Ellis Island in New York and Angel Island in San Francisco. Inspectors examined newcomers for diseases, criminal histories, and other grounds for exclusion. Immigration had become a national system rather than a collection of local decisions.
+At the same time, the courts strengthened federal authority over the subject. In a series of decisions, including the 1889 Chinese Exclusion Case, the Supreme Court affirmed that Congress possessed broad power over immigration policy. The legal foundation for modern immigration enforcement was taking shape.
+The debate intensified as immigration reached historic highs. Millions of people arrived from Southern and Eastern Europe—Italians, Poles, Russians, Greeks, and many others—joining earlier waves of immigrants from Northern and Western Europe. To some Americans, this diversity represented the country's strength. To others, it represented a threat.
+Reformers, restrictionists, and eugenicists argued over the future of immigration. Should America continue accepting mass migration, or should it preserve what they viewed as the country's existing ethnic composition?
+Congress answered gradually. The Immigration Act of 1917 imposed literacy tests and expanded exclusion categories. Then, after World War I, lawmakers moved further. The Emergency Quota Act of 1921 introduced numerical limits. The Immigration Act of 1924 made those limits permanent and tied them to national-origin formulas that heavily favored immigrants from Northern and Western Europe while sharply reducing opportunities for others and effectively excluding immigration from most of Asia.
+For the first time, immigration was governed not merely by who arrived, but by who policymakers believed should arrive.
+The gate had not been closed completely. But it had been narrowed deliberately, and it would remain that way for decades.
+</p>` },
+  { id: "era-4", title: "The National Origins Quota System",
+    intro: "Restriction wasn't just a reaction anymore. The quota system made it permanent.",
+    startIndex: 15, endIndex: 22, bg: "#231726",
+    narrative: `<p>By 1924, the United States had built an immigration system designed to shape the nation's future population. The next question was whether that system could survive the events of the twentieth century.
+For decades, the national-origins quota system governed who could immigrate and in what numbers. The rules favored some countries, restricted others, and excluded many entirely. Immigration continued, but within boundaries carefully established by Congress.
+Then the world changed.
+The Great Depression reduced migration flows, but the rise of fascism in Europe created new pressures. Refugees sought escape from Nazi persecution, yet American immigration policy remained constrained by quota limits and bureaucratic obstacles. Many who hoped to enter the United States never received visas.
+World War II exposed additional contradictions. In 1942, the federal government ordered the removal and incarceration of approximately 120,000 people of Japanese ancestry, most of them American citizens. The policy was upheld by the Supreme Court, raising profound questions about citizenship, loyalty, and constitutional rights during wartime.
+After the war, the United States emerged as a global superpower. The country increasingly presented itself as a leader of the democratic world, yet its immigration laws continued to reflect assumptions rooted in an earlier era. As decolonization spread across Asia and Africa and the Cold War intensified, critics argued that America's immigration policies undermined its claims of equality and freedom.
+Congress responded cautiously. The McCarran-Walter Act of 1952 removed some racial barriers to naturalization and allowed limited immigration from previously excluded countries. Yet the national-origins quota system remained largely intact.
+The pressure for change continued to build. The civil rights movement challenged long-standing assumptions about race and equality at home, while America's role abroad made immigration policy harder to separate from questions of national identity.
+By the 1960s, lawmakers were once again confronting a question that had shaped immigration policy since the nineteenth century: if the old system was no longer defensible, what should replace it?
+</p>` },
+  { id: "era-5", title: "The 1965 Paradigm Shift",
+    intro: "The most consequential immigration law most Americans have never heard of.",
+    startIndex: 23, endIndex: 29, bg: "#22230f",
+    narrative: `<p>By the mid-1960s, few people expected immigration law to transform the country.
+When Congress passed the Immigration and Nationality Act of 1965, lawmakers presented it as a correction to an outdated system. The law abolished the national-origins quotas that had governed immigration since the 1920s and replaced them with a new framework centered on family reunification and employment preferences.
+President Lyndon Johnson signed the bill at the foot of the Statue of Liberty and dismissed fears that it would dramatically alter American society. Most observers agreed. Immigration was not a major national issue, and few predicted how profoundly the new rules would reshape migration patterns over the following decades.
+The effects emerged gradually. Family-based immigration created chains of migration that connected the United States to regions that had previously sent relatively few immigrants. Arrivals from Asia, Latin America, the Caribbean, Africa, and the Middle East increased steadily. Cities, suburbs, and communities across the country began changing in ways few policymakers had anticipated.
+At the same time, another migration system was undergoing its own transformation. For more than two decades, the Bracero Program had provided a legal channel for hundreds of thousands of Mexican agricultural workers to enter the United States temporarily. When the program ended in 1964, the demand for labor did not disappear. Farmers still needed workers, workers still sought jobs, and migration continued under a new and increasingly complicated set of circumstances.
+By the 1970s, immigration policy faced competing pressures. The United States wanted to reunite families, attract skilled workers, and maintain control over unauthorized migration. Refugees fleeing conflicts in Southeast Asia, Cuba, and elsewhere added new dimensions to the system. Congress responded with the Refugee Act of 1980, creating a more formal framework for refugee admissions.
+Yet one issue dominated public debate: the growing number of immigrants living and working in the country without legal status.
+After years of negotiation, Congress passed the Immigration Reform and Control Act of 1986. Signed by President Ronald Reagan, the law combined two ideas that would shape immigration debates for decades. It granted legal status to roughly three million undocumented immigrants already living in the United States while also imposing penalties on employers who knowingly hired unauthorized workers.
+The legislation was intended to settle the issue once and for all.
+Instead, it opened a new chapter. America had become far more diverse than the architects of the 1965 law imagined, and the country was still struggling to decide how immigration should be managed in the future.</p>` },
+  { id: "era-6", title: "National Security and Executive Action",
+    intro: "More enforcement power than ever, and no closer to deciding who belongs.",
+    startIndex: 30, endIndex: 33, bg: "#15171c",
+    narrative: `<p>The decades after 1986 were shaped by a question that previous generations had never fully answered: how should a country manage large-scale immigration while enforcing its laws?
+Throughout the 1990s, policymakers increasingly focused on enforcement. Border infrastructure expanded. New technologies, surveillance systems, and personnel were deployed along the U.S.-Mexico border. Operation Gatekeeper and related initiatives sought to regain control of heavily trafficked crossing corridors by redirecting migration toward more remote areas.
+Congress also expanded the legal machinery of enforcement. The Illegal Immigration Reform and Immigrant Responsibility Act of 1996 broadened deportation authorities, increased penalties for immigration violations, and strengthened the federal government's ability to remove noncitizens from the country.
+Then came September 11, 2001.
+The terrorist attacks transformed the national conversation. Immigration became linked not only to labor markets and demographic change but also to national security. The federal government reorganized its enforcement structure, creating the Department of Homeland Security and placing immigration agencies within a broader counterterrorism framework.
+Despite growing political attention, efforts to produce comprehensive reform repeatedly failed. Presidents and members of Congress proposed legislation that combined legalization programs, border security measures, and changes to legal immigration channels, but no broad compromise survived the political process.
+Meanwhile, immigration continued to reshape the country. The foreign-born population reached levels not seen since the early twentieth century. New technologies connected migrants to their home countries while also creating new pathways for global mobility. Humanitarian crises, economic opportunities, and regional instability continued to drive migration toward the United States.
+Presidents increasingly turned to executive action when Congress could not act. The Obama administration expanded enforcement while also creating DACA, offering temporary protection to certain immigrants who had arrived as children. The Trump administration pursued a wide range of restrictive measures, including travel restrictions, limits on asylum, family-separation policies, and efforts to increase removals. The Biden administration reversed some policies, retained others, and faced new migration surges that renewed debate over the border and asylum system.
+Through every administration, one pattern remained constant: the enforcement system grew larger, more sophisticated, and more powerful.
+Yet the central question persisted.
+For more than four centuries, Americans have argued about immigration because immigration is ultimately tied to questions of national identity, economic need, security, citizenship, and belonging. The laws have changed repeatedly. The arguments have changed less.</p>` }
+];
+
+const POLICY_PATH_COLOR = '#c0a13a';
+
+// Traveler ship + canvas river configuration.
+const SHIP_SRC = 'images/boat.png';   // single source of truth — swap here to change the traveler image
+const SHIP_ANGLE_OFFSET = 90;          // degrees added to the path tangent to align the boat art with travel
+const CSS = getComputedStyle(document.documentElement);
+const RIVER_COLOR = CSS.getPropertyValue('--river').trim();
+const RIVER_W = 60;                    // river width in SVG units (path stroke is ~16)
+
+// Lane semantic colors — restrictive, neutral, expansive
+const LANE_COLORS = {
+  closes: '#e07878',
+  mixed:  '#dec463',
+  opens:  '#62c99e',
+};
+const LANE_COLORS_BRIGHT = {
+  closes: '#e07878',
+  mixed:  '#dec463',
+  opens:  '#62c99e',
+};
+// RGB triples for use in rgba() strings
+const LANE_RGB = {
+  closes: '196,100,100',
+  mixed:  '192,161,58',
+  opens:  '77,168,130',
+};
+
+const POLICY_DOOR_LANES = {
+  closes: { label: 'closes doors', offset: -1 },
+  mixed: { label: 'mixed', offset: 0 },
+  opens: { label: 'opens doors', offset: 1 }
+};
+
+function getPolicyDoorLane(policy) {
+  if (policy.lean <= -0.25) return 'closes';
+  if (policy.lean >= 0.25) return 'opens';
+  return 'mixed';
+}
+
+// ── TIMELINE STATE ─────────────────────────────────────────────────────
+let tlInitialized = false;
+let tlActiveCard = null;
+let tlActivePhoto = null;
+let tlCurrentIndex = -1;
+let eraCurrentIndex = -1;
+let tlEraHoldCover = null;
+let tlEraHoldText = null;
+let tlEraCounter = null;
+let tlVizWrapper = null;
+let lastInHoldEra = -1;
+let pulseTargetIndex = -1;
+
+// Section element + the single GSAP ScrollTrigger instance and master timeline.
+let tlSectionEl = null;
+let tlScrollTrigger = null;
+let tlMasterTl = null;
+
+// Canvas river references (set on each init).
+let riverCanvas = null;
+let riverCtx = null;
+
+// Dirty-check for node cosmetics: the per-node circle/year restyle only depends on
+// (activeIndex, passedIndex), which change at discrete node crossings — not every frame.
+// Sentinel -2 (never a real index) forces a re-apply on the first frame after (re)init.
+let tlLastActiveIndex = -2;
+let tlLastPassedIndex = -2;
+
+function resizeRiverCanvas() {
+  if (!riverCanvas) return;
+  const dpr = window.devicePixelRatio || 1;
+  riverCanvas.width  = Math.floor(window.innerWidth * dpr);
+  riverCanvas.height = Math.floor(window.innerHeight * dpr);
+}
+
+function clearCardOverlay() {
+  if (tlActiveCard)  { tlActiveCard.remove();  tlActiveCard  = null; }
+  if (tlActivePhoto) { tlActivePhoto.remove(); tlActivePhoto = null; }
+  tlCurrentIndex = -1;
+}
+
+function clearEraOverlay() {
+  eraCurrentIndex = -1;
+  lastInHoldEra = -1;
+  pulseTargetIndex = -1;
+  if (tlEraHoldCover) { tlEraHoldCover.remove(); tlEraHoldCover = null; }
+  if (tlEraHoldText) { tlEraHoldText.remove(); tlEraHoldText = null; }
+  if (tlEraCounter) tlEraCounter.style.opacity = '0';
+  if (tlVizWrapper) tlVizWrapper.style.opacity = '';
+  document.body.style.backgroundColor = '';
+}
+
+function clearTimelineOverlays() {
+  clearCardOverlay();
+  clearEraOverlay();
+}
+
+function getActiveEra(nodeIdx) {
+  for (let i = 0; i < eras.length; i++) {
+    if (nodeIdx >= eras[i].startIndex && nodeIdx <= eras[i].endIndex) return i;
+  }
+  return eras.length - 1;
+}
+
+const ERA_IMAGES = {
+  0: 'images/img3.jpg',
+  1: 'images/image2.webp',
+  2: 'images/image.webp',
+  3: 'images/image4.jpg',
+  4: 'images/image5.jpg',
+  5: 'images/image6.jpg',
+};
+const ERA_DATE_RANGES = [
+  '1600s – 1770s',
+  '1780s – 1874',
+  '1875 – 1920',
+  '1921 – 1964',
+  '1965 – 2000',
+  '2001 – 2025',
+];
+const ERA_CAPTIONS = [
+  'William Penn\'s Treaty with the Indians, Pennsylvania, 1681. Library of Congress.',
+  'Puck magazine: immigrants at the U.S. Bureau of Reception, c. 1880. Library of Congress.',
+  'The Anti-Chinese Wall, Puck magazine, 1882. Library of Congress.',
+  '"The Only Way to Handle It" — political cartoon on the quota system, 1921. Library of Congress.',
+  'President Johnson signs the Immigration and Nationality Act, Liberty Island, October 3, 1965. LBJ Presidential Library.',
+  'U.S.–Mexico border fence.',
+];
+
+function updateEraPanel(eraIdx) {
+  if (eraIdx < 0) {
+    document.body.style.backgroundColor = '';
+    return;
+  }
+  const era = eras[eraIdx];
+  document.body.style.backgroundColor = era.bg;
+
+  // Cover screen (screen 1) — static, translateY-driven
+  if (tlEraHoldCover) { tlEraHoldCover.remove(); tlEraHoldCover = null; }
+  const imgSrc = ERA_IMAGES[eraIdx];
+  const cover = document.createElement('div');
+  cover.className = 'era-hold-cover';
+  cover.style.cssText = `background:${era.bg};transform:translateY(0);`;
+  const dateRange = ERA_DATE_RANGES[eraIdx] || '';
+  const caption   = ERA_CAPTIONS[eraIdx]    || '';
+  cover.innerHTML = `
+    ${imgSrc ? `<div class="era-cover-bg" style="background-image:url('${imgSrc}')"></div>
+    <div class="era-cover-scrim"></div>` : ''}
+    <div class="era-cover-inner">
+      <span class="era-cover-rule"></span>
+      <span class="era-cover-eyebrow">Era ${eraIdx + 1} · ${dateRange}</span>
+      <h2 class="era-cover-title">${era.title}</h2>
+      ${caption && imgSrc ? `<p class="era-cover-caption">${caption}</p>` : ''}
+    </div>`;
+  document.body.appendChild(cover);
+  tlEraHoldCover = cover;
+
+  // Text screen (screen 2) — starts below viewport
+  if (tlEraHoldText) { tlEraHoldText.remove(); tlEraHoldText = null; }
+  const textEl = document.createElement('div');
+  textEl.className = 'era-hold-text';
+  textEl.style.cssText = `background:linear-gradient(to bottom, transparent 0%, #000000 8%);transform:translateY(100vh);`;
+  textEl.innerHTML = `<div class="era-hold-text-inner">
+    <p class="era-text-eyebrow">Era ${eraIdx + 1} of ${eras.length}</p>
+    <div class="era-text-body">${era.narrative}</div>
+  </div>`;
+  document.body.appendChild(textEl);
+  tlEraHoldText = textEl;
+
+  // Era counter
+  if (tlEraCounter) {
+    tlEraCounter.textContent = `Era ${eraIdx + 1} of ${eras.length}`;
+    tlEraCounter.style.opacity = '1';
+  }
+}
+
+function getPathDistanceToPoint(pathNode, len, point) {
+  const pt = pathNode.getPointAtLength(len);
+  const dx = pt.x - point.x;
+  const dy = pt.y - point.y;
+  return dx * dx + dy * dy;
+}
+
+function getNodePathLengths(pathNode, points, totalLen) {
+  const coarseSteps = 8000;
+  const coarseStepLen = totalLen / coarseSteps;
+  const matches = points.map((_, index) => ({
+    len: index === 0 ? 0 : index === points.length - 1 ? totalLen : 0,
+    dist: Infinity
+  }));
+
+  for (let step = 0; step <= coarseSteps; step++) {
+    const len = (step / coarseSteps) * totalLen;
+    const pt = pathNode.getPointAtLength(len);
+
+    points.forEach((point, index) => {
+      const dx = pt.x - point.x;
+      const dy = pt.y - point.y;
+      const dist = dx * dx + dy * dy;
+      if (dist < matches[index].dist) matches[index] = {dist, len};
+    });
+  }
+
+  const lengths = matches.map((match, index) => {
+    if (index === 0) return 0;
+    if (index === points.length - 1) return totalLen;
+
+    let bestLen = match.len;
+    let bestDist = getPathDistanceToPoint(pathNode, bestLen, points[index]);
+    let delta = coarseStepLen;
+
+    for (let i = 0; i < 24; i++) {
+      const leftLen = Math.max(0, bestLen - delta);
+      const rightLen = Math.min(totalLen, bestLen + delta);
+      const leftDist = getPathDistanceToPoint(pathNode, leftLen, points[index]);
+      const rightDist = getPathDistanceToPoint(pathNode, rightLen, points[index]);
+
+      if (leftDist < bestDist && leftDist <= rightDist) {
+        bestLen = leftLen;
+        bestDist = leftDist;
+      } else if (rightDist < bestDist) {
+        bestLen = rightLen;
+        bestDist = rightDist;
+      } else {
+        delta /= 2;
+      }
+    }
+
+    return bestLen;
+  });
+
+  for (let i = 1; i < lengths.length; i++) {
+    if (lengths[i] < lengths[i - 1]) lengths[i] = lengths[i - 1];
+  }
+
+  return lengths;
+}
+
+// Scroll-driven era hold — everything is a pure function of holdP (0→1).
+// No snaps anywhere. All motion is physical: elements rise from below, leave
+// through the top. Path fades behind them at entry and re-emerges at exit.
+//
+//   0.00 → 0.12  cover rises from below (100vh → 0)   path fades out (1→0)
+//   0.12 → 0.45  cover holds full-screen               path hidden
+//   0.45 → 0.65  cover slides off top, text rises in   path hidden
+//   0.65 → 0.88  text holds full-screen                path hidden
+//   0.88 → 1.00  text slides off top                   path fades back in (0→1)
+function applyEraHold(coverEl, textEl, holdP) {
+  if (!coverEl || !textEl) return;
+
+  // Cover Y
+  let coverY;
+  if      (holdP < 0.12) coverY = (1 - holdP / 0.12) * 100;          // 100vh → 0
+  else if (holdP < 0.45) coverY = 0;                                   // static
+  else if (holdP < 0.65) coverY = -((holdP - 0.45) / 0.20) * 100;    // 0 → -100vh
+  else                   coverY = -100;                                 // gone
+
+  // Text Y
+  let textY;
+  if      (holdP < 0.45) textY = 100;                                   // below viewport
+  else if (holdP < 0.65) textY = (1 - (holdP - 0.45) / 0.20) * 100;  // 100vh → 0
+  else if (holdP < 0.88) textY = 0;                                     // static
+  else                   textY = -((holdP - 0.88) / 0.12) * 100;      // 0 → -100vh
+
+  coverEl.style.transform = `translateY(${coverY}vh)`;
+  textEl.style.transform  = `translateY(${textY}vh)`;
+
+  // Path opacity — fades out as cover enters, fades back in as text exits
+  if (tlVizWrapper) {
+    let op;
+    if      (holdP < 0.10) op = 1 - holdP / 0.10;          // 1 → 0
+    else if (holdP > 0.88) op = (holdP - 0.88) / 0.12;     // 0 → 1
+    else                   op = 0;
+    tlVizWrapper.style.opacity = op >= 0.999 ? '' : String(op.toFixed(3));
+  }
+}
+
+// ── SCROLL-DRIVEN POLICY TIMELINE (GSAP ScrollTrigger) ─────────────────
+function initPolicyTimeline() {
+  if (tlInitialized) return;
+
+  const svgEl = document.getElementById('timeline-viz');
+  if (!svgEl || typeof d3 === 'undefined') return;
+
+  tlSectionEl = document.getElementById('policy-history');
+  const containerEl = tlSectionEl ? tlSectionEl.querySelector('.tl-timeline-container') : null;
+  if (!tlSectionEl || !containerEl) return;
+
+  tlInitialized = true;
+
+  // Canvas river surface
+  riverCanvas = document.getElementById('river-canvas');
+  riverCtx = riverCanvas ? riverCanvas.getContext('2d') : null;
+  resizeRiverCanvas();
+
+  const svg = d3.select('#timeline-viz');
+  const W = 1200, H = 800;
+  const CONNECTOR_LEN = 120; // SVG units — connector length from node to card edge
+  const isMobileTimeline = window.matchMedia('(max-width: 768px)').matches;
+  const pathDataCenterX = W * 0.5;                            // path centered on full screen
+  const tlXSpread = W * (isMobileTimeline ? 0.10 : 0.13);    // lane spread
+  const viewCenterX = pathDataCenterX;                        // overview only; follow phase ignores X
+  const tlYSpan = H * (isMobileTimeline ? 3.2 : 6.0);
+  const bgPathWidth = isMobileTimeline ? 14 : 18;
+  const animPathWidth = isMobileTimeline ? 12 : 16;
+  const nodeRadius = isMobileTimeline ? 10 : 12;
+  const nodeStrokeWidth = isMobileTimeline ? 2 : 2.5;
+  const yearOffset = isMobileTimeline ? 22 : 28;
+  const baseYearSize = isMobileTimeline ? 12 : 14;
+  const activeYearSize = isMobileTimeline ? 18 : 28;
+  const baseYearStrokeWidth = isMobileTimeline ? 2.5 : 3;
+  const activeYearStrokeWidth = isMobileTimeline ? 3 : 4;
+  const SHIP_SIZE = isMobileTimeline ? 70 : 50;  // ship image edge in SVG units
+
+  // Build path points: x snaps to three editorial lanes, y encodes time.
+  const points = policies.map((p, i) => {
+    const t = i / (policies.length - 1);
+    const lane = POLICY_DOOR_LANES[getPolicyDoorLane(p)];
+    return {
+      x: pathDataCenterX + lane.offset * tlXSpread,
+      y: H * 0.15 + tlYSpan * t,
+      lane: lane.label,
+      index: i
+    };
+  });
+
+  const line = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveMonotoneY);
+  const pathData = line(points);
+
+  // ── CAMERA GROUP — all path/node content moves together ───────────────
+  const cameraGroup = svg.append('g').attr('class', 'tl-camera');
+
+  const laneLabelData = Object.values(POLICY_DOOR_LANES).map(lane => ({
+    label: lane.label,
+    x: pathDataCenterX + lane.offset * tlXSpread
+  }));
+
+  const laneGuides = cameraGroup.append('g').attr('class', 'tl-lane-guides');
+  laneLabelData.forEach(lane => {
+    laneGuides.append('line')
+      .attr('x1', lane.x).attr('y1', H * 0.08)
+      .attr('x2', lane.x).attr('y2', H * 0.15 + tlYSpan)
+      .attr('stroke', 'rgba(192,161,58,0.11)')
+      .attr('stroke-width', 1)
+      .attr('stroke-dasharray', '3,7');
+
+  });
+
+  // Overview highlight path (slightly brighter, fades out as you zoom in)
+  const overviewBgPath = cameraGroup.append('path').attr('class', 'tl-overview-bg').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', 'rgba(192,161,58,0.26)')
+    .attr('stroke-width', bgPathWidth + 2).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+  // Background path
+  cameraGroup.append('path').attr('class', 'tl-bg-path').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', 'rgba(192,161,58,0.1)')
+    .attr('stroke-width', bgPathWidth).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+  // Geometry path — hidden via CSS (opacity:0). Serves as the MotionPathPlugin
+  // source for the ship and as the basis for arc-length node measurements.
+  const animPath = cameraGroup.append('path').attr('class', 'tl-anim-path').attr('d', pathData)
+    .attr('fill', 'none').attr('stroke', POLICY_PATH_COLOR)
+    .attr('stroke-width', animPathWidth).attr('stroke-linecap', 'round').attr('stroke-linejoin', 'round');
+
+  // Nodes
+  const nodeGroups = cameraGroup.selectAll('.tl-node').data(points).enter()
+    .append('g').attr('class', 'tl-node')
+    .attr('transform', d => `translate(${d.x},${d.y})`);
+
+  nodeGroups.append('circle').attr('r', nodeRadius)
+    .attr('fill', d => `rgba(${LANE_RGB[getPolicyDoorLane(policies[d.index])]},0.22)`)
+    .attr('stroke', d => LANE_COLORS[getPolicyDoorLane(policies[d.index])])
+    .attr('stroke-width', nodeStrokeWidth);
+
+  nodeGroups.append('text')
+    .attr('class', 'tl-node-year')
+    .attr('x', yearOffset)
+    .attr('y', 4)
+    .attr('text-anchor', 'start')
+    .attr('fill', d => LANE_COLORS[getPolicyDoorLane(policies[d.index])])
+    .style('font-family', "'Space Mono', monospace")
+    .style('font-size', `${baseYearSize}px`).style('font-weight', '400')
+    .style('font-style', 'normal')
+    .style('letter-spacing', '0.04em')
+    .style('paint-order', 'stroke')
+    .style('stroke', 'rgba(10,17,40,0.9)')
+    .style('stroke-width', `${baseYearStrokeWidth}px`)
+    .style('opacity', 0)
+    .text(d => policies[d.index].year);
+
+  // Fixed axis overlay — NOT in cameraGroup, stays screen-fixed
+  const axis = svg.append('g').attr('class', 'tl-axis');
+
+  const laneLabels = axis.selectAll('.tl-lane-label').data(laneLabelData).enter()
+    .append('text')
+      .attr('class', 'tl-lane-label')
+      .attr('x', d => d.x).attr('y', 34)
+      .attr('text-anchor', 'middle')
+      .attr('fill', 'rgba(192,161,58,0.7)')
+      .style('font-family', "'Space Mono', monospace")
+      .style('font-size', '9px').style('letter-spacing', '1px')
+      .text(d => d.label);
+
+  // Connector — updated per-frame so it tracks the active node as camera moves
+  const connector = axis.append('line')
+    .attr('class', 'tl-connector')
+    .attr('stroke', 'rgba(212,165,116,0.85)')
+    .attr('stroke-width', 2)
+    .attr('stroke-dasharray', '6,4')
+    .style('display', 'none');
+
+  // SVG traveler ship — replaces the old traveler dot. Sits on the active node's
+  // screen point (tipX, H/2) and rotates to the path tangent. Tracks per-frame.
+  const ship = axis.append('image')
+    .attr('class', 'tl-ship')
+    .attr('href', SHIP_SRC)
+    .attr('width', SHIP_SIZE)
+    .attr('height', SHIP_SIZE)
+    .attr('preserveAspectRatio', 'xMidYMid meet')
+    .style('display', 'none')
+    .style('filter', 'drop-shadow(0 0 10px rgba(192,161,58,0.55))');
+  // Legacy xlink:href for maximum SVG renderer compatibility.
+  ship.node().setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', SHIP_SRC);
+
+  const totalLen = animPath.node().getTotalLength();
+  const nodeAtLength = getNodePathLengths(animPath.node(), points, totalLen);
+
+  // ── RIVER SAMPLES ─────────────────────────────────────────────────────
+  // Pre-sample the path once (raw SVG-viewBox coords). Each frame these are
+  // pushed through the camera transform and the SVG→screen CTM, then drawn as a
+  // single flat-blue stroked band on the canvas. No shadow, no second outline.
+  const riverSampleCount = Math.max(160, Math.floor(totalLen / 6));
+  const riverSamples = new Array(riverSampleCount + 1);
+  for (let i = 0; i <= riverSampleCount; i++) {
+    const pt = animPath.node().getPointAtLength((i / riverSampleCount) * totalLen);
+    riverSamples[i] = { x: pt.x, y: pt.y };
+  }
+
+  function drawRiver(camTx, camTy, camScale, ctm) {
+    if (!riverCtx || !ctm) return;
+    const dpr = window.devicePixelRatio || 1;
+    riverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    riverCtx.clearRect(0, 0, riverCanvas.width / dpr, riverCanvas.height / dpr);
+
+    riverCtx.beginPath();
+    for (let i = 0; i < riverSamples.length; i++) {
+      const s = riverSamples[i];
+      const vx = camTx + camScale * s.x;
+      const vy = camTy + camScale * s.y;
+      const X = ctm.a * vx + ctm.c * vy + ctm.e;
+      const Y = ctm.b * vx + ctm.d * vy + ctm.f;
+      if (i === 0) riverCtx.moveTo(X, Y);
+      else         riverCtx.lineTo(X, Y);
+    }
+    riverCtx.lineJoin = 'round';
+    riverCtx.lineCap = 'round';
+    riverCtx.shadowBlur = 0;
+    riverCtx.shadowColor = 'transparent';
+    riverCtx.strokeStyle = RIVER_COLOR;
+    riverCtx.lineWidth = Math.max(1, RIVER_W * camScale * ctm.a);
+    riverCtx.stroke();
+  }
+
+  // ── VIRTUAL TIMELINE ─────────────────────────────────────────────────
+  // Each era's first node is preceded by HOLD_SLOTS virtual slots split evenly
+  // between the cover screen (holdP 0–0.5) and the text screen (holdP 0.5–1).
+  const HOLD_SLOTS = 16;
+  const eraStartSet = new Set(eras.map(e => e.startIndex));
+  const virtualNodeSlot = new Array(points.length);
+  let _vSlot = 0;
+  for (let vi = 0; vi < points.length; vi++) {
+    if (eraStartSet.has(vi)) _vSlot += HOLD_SLOTS;
+    virtualNodeSlot[vi] = _vSlot;
+    _vSlot += 1;
+  }
+  const totalVirtualSlots = _vSlot - 1;
+  // Per-era hold range [vStart, vEnd) in virtual slot space
+  const eraHoldRanges = eras.map(era => ({
+    vStart: virtualNodeSlot[era.startIndex] - HOLD_SLOTS,
+    vEnd:   virtualNodeSlot[era.startIndex],
+  }));
+
+  // Colored background segments — one per inter-node interval, tinted by the
+  // destination node's lane. Inserted before the animated path so the gold
+  // progress stroke draws on top.
+  for (let i = 0; i < points.length - 1; i++) {
+    const destLane = getPolicyDoorLane(policies[points[i + 1].index]);
+    const segLen = nodeAtLength[i + 1] - nodeAtLength[i];
+    cameraGroup.insert('path', '.tl-anim-path')
+      .attr('class', 'tl-seg-path')
+      .attr('d', pathData)
+      .attr('fill', 'none')
+      .attr('stroke', LANE_COLORS[destLane])
+      .attr('stroke-width', bgPathWidth)
+      .attr('stroke-linecap', 'round')
+      .attr('stroke-linejoin', 'round')
+      .attr('stroke-dasharray', `${segLen} ${totalLen + 10}`)
+      .attr('stroke-dashoffset', -nodeAtLength[i]);
+  }
+
+  // ── OVERVIEW CAMERA CONSTANTS ─────────────────────────────────────────
+  const pathCenterX = pathDataCenterX;
+  const pathCenterY = H * 0.15 + tlYSpan / 2;
+  const pathTotalHeight = H * 0.15 + tlYSpan;
+  const overviewScale = (H * 0.82) / pathTotalHeight;
+  const overviewTx = viewCenterX - overviewScale * pathCenterX;
+  const overviewTy = H / 2 - overviewScale * pathCenterY;
+
+  // Compute overviewX for each lane label — the screen x of each lane in overview phase
+  laneLabelData.forEach(lane => {
+    lane.overviewX = lane.x * overviewScale + overviewTx;
+  });
+
+  let cardDir = 1; // 1 = card right of node, -1 = card left (opens lane)
+
+  // Map SVG coordinates to viewport pixels using the element's current transform.
+  function svgToViewport(svgX, svgY) {
+    const pt = svgEl.createSVGPoint();
+    pt.x = svgX; pt.y = svgY;
+    const s = pt.matrixTransform(svgEl.getScreenCTM());
+    return { x: s.x, y: s.y };
+  }
+
+  function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
+
+  // ── MOTION-PATH SETUP ─────────────────────────────────────────────────
+  // MotionPathPlugin caches the raw path + arc-length measurements once, so the
+  // ship's position/angle and the follow camera come from getPositionOnPath()
+  // instead of a manual getPointAtLength() on every frame.
+  const rawPath = MotionPathPlugin.getRawPath(animPath.node());
+  MotionPathPlugin.cacheRawPathMeasurements(rawPath);
+  const nodeFrac = nodeAtLength.map(l => l / totalLen);   // arc-length fraction per node
+
+  // ── TIME BUDGET ───────────────────────────────────────────────────────
+  // The follow phase spans `totalVirtualSlots` slots; overview/zoom keep the
+  // same 3% / 4% share of total scroll as the original mapping. Absolute units
+  // are arbitrary under a scrubbed ScrollTrigger — only the ratios matter.
+  const OV_DUR   = totalVirtualSlots * (0.03 / 0.93);
+  const ZOOM_DUR = totalVirtualSlots * (0.04 / 0.93);
+  const T_OV   = OV_DUR;
+  const T_ZOOM = OV_DUR + ZOOM_DUR;
+
+  // GSAP-tweened proxies: the camera (overview→zoom) and the ship traveler
+  // (`frac` = arc-length position along the path). The follow camera is derived
+  // from the ship, so these are the only animated state.
+  const cam = { tx: overviewTx, ty: overviewTy, scale: overviewScale };
+  const nav = { frac: 0 };
+  const eraHoldTimes = [];   // per-era reading-hold [tStart, tEnd) in timeline time
+
+  // applyFrame() — the single render sink. Runs on every master-timeline update
+  // (one scrub tick). Reads GSAP state (timeline time, cam + nav proxies) and
+  // paints one frame: camera transform, canvas river, ship, lane labels, nodes,
+  // era holds and the policy card. No scroll reads, no rAF, no layout writes
+  // outside the card measurement.
+  function applyFrame() {
+    if (!tlSectionEl || !tlMasterTl) return;
+    const t = tlMasterTl.time();
+    const followPhase = t > T_ZOOM + 1e-4;
+
+    // ── SHIP POSITION (MotionPathPlugin) — also feeds the follow camera ──
+    let shipX = points[0].x, shipY = points[0].y, shipAngle = 0;
+    if (followPhase) {
+      const pos = MotionPathPlugin.getPositionOnPath(rawPath, Math.min(1, Math.max(0, nav.frac)), true);
+      shipX = pos.x; shipY = pos.y; shipAngle = pos.angle;
+    }
+
+    // ── CAMERA ── overview/zoom from the cam proxy; follow tracks the ship ──
+    let camTx, camTy, camScale;
+    if (!followPhase) {
+      camTx = cam.tx; camTy = cam.ty; camScale = cam.scale;
+    } else {
+      camTx = 0; camScale = 1; camTy = H / 2 - shipY;   // vertical-only follow
+    }
+    cameraGroup.attr('transform', `translate(${camTx},${camTy}) scale(${camScale})`);
+
+    // ── RIVER ── redraw the flat-blue band under the same camera transform ──
+    drawRiver(camTx, camTy, camScale, svgEl.getScreenCTM());
+
+    // ── LANE LABELS ──
+    const laneFollowRaw = t <= T_OV ? 0 : t <= T_ZOOM ? (t - T_OV) / ZOOM_DUR : 1;
+    const laneFollowT = laneFollowRaw <= 0 ? 0 : laneFollowRaw >= 1 ? 1 : easeInOut(laneFollowRaw);
+    laneLabels
+      .attr('x', d => {
+        const cameraX = d.x * camScale + camTx;
+        const targetX = laneFollowT === 1
+          ? Math.max(20, Math.min(W - 20, cameraX))
+          : cameraX;
+        return d.overviewX + (targetX - d.overviewX) * laneFollowT;
+      })
+      .style('opacity', d => {
+        if (laneFollowT < 1) return 1;
+        const cameraX = d.x * camScale + camTx;
+        return (cameraX >= -80 && cameraX <= W + 80) ? 1 : 0;
+      });
+
+    // ── OVERVIEW HIGHLIGHT FADE ──
+    const overviewFade = t <= T_OV ? 1 : t <= T_ZOOM ? 1 - (t - T_OV) / ZOOM_DUR : 0;
+    overviewBgPath.style('opacity', overviewFade);
+
+    // ── SHIP RENDER ── MotionPathPlugin gives the path x + tangent angle; the
+    // ship lives in the screen-fixed axis layer pinned to centre H/2 (the camera
+    // scrolls the path so the tip lands there). x swings with the active lane.
+    ship.style('display', followPhase ? null : 'none');
+    if (followPhase) {
+      ship.attr('transform', `translate(${shipX - SHIP_SIZE / 2},${H / 2 - SHIP_SIZE / 2}) rotate(${shipAngle + SHIP_ANGLE_OFFSET} ${SHIP_SIZE / 2} ${SHIP_SIZE / 2})`);
+    }
+
+    // ── NODE STATE ── derived from the ship's path Y (monotonic with time) ──
+    let passedIndex = -1, activeIndex = -1;
+    if (followPhase) {
+      for (let i = 0; i < points.length; i++) {
+        if (shipY >= points[i].y - 0.5) passedIndex = i; else break;
+      }
+      let best = 0, bestGap = Infinity;
+      for (let i = 0; i < points.length; i++) {
+        const gap = Math.abs(shipY - points[i].y);
+        if (gap < bestGap) { bestGap = gap; best = i; }
+      }
+      activeIndex = best;
+    }
+
+    // Adaptive card direction: opens-lane nodes put the card to the left
+    cardDir = (activeIndex >= 0 && getPolicyDoorLane(policies[activeIndex]) === 'opens') ? -1 : 1;
+
+    // ── ERA HOLD DETECTION (from timeline time) ──
+    let inHoldEra = -1, holdP = 0;
+    if (followPhase) {
+      for (let h = 0; h < eraHoldTimes.length; h++) {
+        const hr = eraHoldTimes[h];
+        if (hr && t >= hr.tStart - 1e-4 && t < hr.tEnd) {
+          inHoldEra = h;
+          holdP = Math.min(1, Math.max(0, (t - hr.tStart) / (hr.tEnd - hr.tStart)));
+          break;
+        }
+      }
+    }
+
+    // ── ERA SYNC ──
+    // inHoldEra >= 0 → reading hold: era cover + text visible, no policy cards.
+    // inHoldEra === -1 → node walk: cards visible, era text hidden.
+    let suppressCard = false;
+    if (followPhase) {
+      if (inHoldEra >= 0) {
+        if (inHoldEra !== eraCurrentIndex || !tlEraHoldCover || !tlEraHoldText) {
+          eraCurrentIndex = inHoldEra;
+          updateEraPanel(inHoldEra);
+        }
+        applyEraHold(tlEraHoldCover, tlEraHoldText, holdP);
+        suppressCard = true;
+        connector.style('display', 'none');
+        lastInHoldEra = inHoldEra;
+      } else {
+        if (lastInHoldEra >= 0) {
+          pulseTargetIndex = eras[lastInHoldEra].startIndex;
+          lastInHoldEra = -1;
+          if (tlEraHoldCover) { tlEraHoldCover.remove(); tlEraHoldCover = null; }
+          if (tlEraHoldText)  { tlEraHoldText.remove();  tlEraHoldText  = null; }
+          if (tlEraCounter) tlEraCounter.style.opacity = '0';
+        }
+        if (tlVizWrapper) tlVizWrapper.style.opacity = '';
+        // Update body background color if era changes mid-walk
+        const nodeForEra = Math.max(passedIndex, activeIndex >= 0 ? activeIndex : passedIndex);
+        const walkEraIdx = nodeForEra >= 0 ? getActiveEra(nodeForEra) : -1;
+        if (walkEraIdx >= 0 && walkEraIdx !== eraCurrentIndex) {
+          eraCurrentIndex = walkEraIdx;
+          document.body.style.backgroundColor = eras[walkEraIdx].bg;
+        }
+        // Adaptive connector: direction matches card side
+        if (!isMobileTimeline && activeIndex >= 0) {
+          const activeLane = getPolicyDoorLane(policies[activeIndex]);
+          connector
+            .style('display', null)
+            .attr('stroke', `rgba(${LANE_RGB[activeLane]},0.65)`)
+            .attr('x1', shipX).attr('y1', H / 2)
+            .attr('x2', shipX + cardDir * CONNECTOR_LEN).attr('y2', H / 2);
+        } else {
+          connector.style('display', 'none');
+        }
+      }
+    } else {
+      // overview / zoom: no card, no connector
+      connector.style('display', 'none');
+    }
+
+    // Node cosmetics — only re-apply when (activeIndex, passedIndex) change.
+    const nodeStateDirty = activeIndex !== tlLastActiveIndex || passedIndex !== tlLastPassedIndex;
+    if (nodeStateDirty) {
+      tlLastActiveIndex = activeIndex;
+      tlLastPassedIndex = passedIndex;
+
+    cameraGroup.selectAll('g.tl-node circle').each(function(d) {
+      const rgb = LANE_RGB[getPolicyDoorLane(policies[d.index])];
+      if (d.index === activeIndex)
+        d3.select(this).style('filter', `drop-shadow(0 0 20px rgba(${rgb},0.9))`);
+      else if (d.index < passedIndex)
+        d3.select(this).style('filter', `drop-shadow(0 0 12px rgba(${rgb},0.6))`);
+      else
+        d3.select(this).style('filter', 'none');
+    });
+
+    cameraGroup.selectAll('g.tl-node text.tl-node-year').each(function(d) {
+      const year = d3.select(this);
+      const lane = getPolicyDoorLane(policies[d.index]);
+      const rgb  = LANE_RGB[lane];
+      if (d.index === activeIndex) {
+        year
+          .attr('fill', LANE_COLORS_BRIGHT[lane])
+          .style('font-size', `${activeYearSize}px`)
+          .style('font-weight', '700')
+          .style('stroke', 'rgba(10,17,40,0.96)')
+          .style('stroke-width', `${activeYearStrokeWidth}px`)
+          .style('filter', `drop-shadow(0 0 10px rgba(${rgb},0.45))`)
+          .style('opacity', '1');
+      } else if (d.index < passedIndex) {
+        year
+          .attr('fill', LANE_COLORS[lane])
+          .style('font-size', `${baseYearSize}px`)
+          .style('font-weight', '400')
+          .style('stroke', 'rgba(10,17,40,0.9)')
+          .style('stroke-width', `${baseYearStrokeWidth}px`)
+          .style('filter', 'none')
+          .style('opacity', '0.12');
+      } else {
+        year
+          .attr('fill', LANE_COLORS[lane])
+          .style('font-size', `${baseYearSize}px`)
+          .style('font-weight', '600')
+          .style('stroke', 'rgba(10,17,40,0.85)')
+          .style('stroke-width', `${baseYearStrokeWidth}px`)
+          .style('filter', 'none')
+          .style('opacity', '0.5');
+      }
+    });
+    } // end nodeStateDirty
+
+    // Completion state — all policies have been passed
+    const vizWrapper = document.querySelector('.tl-viz-wrapper');
+    if (vizWrapper) vizWrapper.classList.toggle('tl-complete', passedIndex >= policies.length - 1);
+
+    // Apply re-entry pulse once on the first frame after exiting hold
+    if (pulseTargetIndex >= 0) {
+      cameraGroup.selectAll('g.tl-node')
+        .filter(d => d.index === pulseTargetIndex)
+        .select('circle')
+        .each(function() {
+          const el = this;
+          el.classList.add('pulse-entry');
+          el.addEventListener('animationend', () => el.classList.remove('pulse-entry'), { once: true });
+        });
+      pulseTargetIndex = -1;
+    }
+
+    // During a reading hold, suppress policy cards entirely.
+    if (suppressCard) { clearCardOverlay(); return; }
+
+    if (activeIndex === -1) {
+      clearCardOverlay();
+      return;
+    }
+
+    if (activeIndex === tlCurrentIndex || activeIndex >= policies.length) return;
+    tlCurrentIndex = activeIndex;
+
+    const policy = policies[activeIndex];
+
+    if (tlActiveCard)  { tlActiveCard.remove();  tlActiveCard  = null; }
+    if (tlActivePhoto) { tlActivePhoto.remove(); tlActivePhoto = null; }
+
+    // Adaptive card placement: opens-lane nodes put card to the left
+    const CARD_WIDTH = 340;
+    const connectorEndX = shipX + cardDir * CONNECTOR_LEN;
+    const vpAnchor  = svgToViewport(connectorEndX, H / 2);
+    const rawLeft   = cardDir === 1
+      ? Math.round(vpAnchor.x + 10)
+      : Math.round(vpAnchor.x - 10 - CARD_WIDTH);
+    const cardLeft  = Math.max(10, Math.min(window.innerWidth - CARD_WIDTH - 10, rawLeft));
+
+    tlActiveCard = document.createElement('div');
+    tlActiveCard.className = 'policy-item right active';
+    tlActiveCard.style.cssText = `position:fixed;left:${cardLeft}px;top:0;z-index:100;width:${CARD_WIDTH}px;max-height:calc(100vh - 40px);overflow-y:auto;`;
+    tlActiveCard.innerHTML = `
+      ${policy.image ? `<img class="policy-photo" src="${policy.image}" alt="${policy.title}" loading="lazy">` : ''}
+      <div class="policy-card">
+        <div class="policy-year">${policy.year}</div>
+        <div class="policy-title">${policy.title}</div>
+        <div class="policy-type">${policy.type}</div>
+        <p class="policy-description">${policy.description}</p>
+        <div class="policy-impact"><strong style="color:${LANE_COLORS[getPolicyDoorLane(policy)]}">Impact:</strong> ${policy.impact}</div>
+        ${policy.note ? `<div class="policy-note">${policy.note}</div>` : ''}
+      </div>`;
+    document.body.appendChild(tlActiveCard);
+
+    // Vertical placement: center card on node, clamp so title stays on screen
+    const vMargin = 20;
+    const cardH = tlActiveCard.offsetHeight;
+    const nodeY = vpAnchor.y;
+    let topPx;
+    if (cardH >= window.innerHeight - vMargin * 2) {
+      topPx = vMargin;
+    } else {
+      const maxTop = window.innerHeight - vMargin - cardH;
+      topPx = Math.max(vMargin, Math.min(Math.round(nodeY - cardH / 2), maxTop));
+    }
+    tlActiveCard.style.top = topPx + 'px';
+  }
+
+  // Cache viz wrapper reference for opacity toggling during hold
+  tlVizWrapper = document.querySelector('.tl-viz-wrapper');
+
+  // Create era counter once; reuse across reinits
+  if (!tlEraCounter) {
+    tlEraCounter = document.createElement('div');
+    tlEraCounter.className = 'era-counter';
+    tlEraCounter.style.opacity = '0';
+    document.body.appendChild(tlEraCounter);
+  }
+
+  // ── THE MASTER GSAP TIMELINE ─────────────────────────────────────────
+  // One paused timeline owns all animation. Sequence: overview (static) →
+  // zoom-in (camera proxy) → per-era [reading hold → node-by-node walk]. Holds
+  // are empty time spans (ship frozen); each inter-node segment is one slot with
+  // a smootherstep ease (matching the original), tweening nav.frac — the ship's
+  // arc-length position consumed by MotionPathPlugin in applyFrame. The walk
+  // bridges into the next era's first node so the ship is parked there for the
+  // next hold. Budget: 33 segments + 6×HOLD_SLOTS = totalVirtualSlots.
+  const smoother = p => p * p * p * (p * (p * 6 - 15) + 10);
+  if (tlMasterTl) { tlMasterTl.kill(); tlMasterTl = null; }
+  tlMasterTl = gsap.timeline({ paused: true, onUpdate: applyFrame });
+  tlMasterTl.to({}, { duration: OV_DUR });                                  // overview (static)
+  tlMasterTl.to(cam, { tx: 0, ty: H / 2 - points[0].y, scale: 1,           // zoom-in to first node
+                       duration: ZOOM_DUR, ease: 'power1.inOut' });
+  eras.forEach((era, h) => {
+    const tStart = tlMasterTl.duration();                                   // reading hold (ship frozen at this era's first node)
+    tlMasterTl.to({}, { duration: HOLD_SLOTS });
+    eraHoldTimes[h] = { tStart, tEnd: tlMasterTl.duration() };
+    const walkEnd = (h < eras.length - 1) ? eras[h + 1].startIndex : era.endIndex;
+    for (let i = era.startIndex; i < walkEnd; i++) {                        // node-by-node, 1 slot each
+      tlMasterTl.to(nav, { frac: nodeFrac[i + 1], duration: 1, ease: smoother });
+    }
+  });
+
+  // ── THE SINGLE SCROLL SYSTEM ─────────────────────────────────────────
+  // One ScrollTrigger scrubs the master timeline across the tall container.
+  // onToggle owns the .is-active visibility class.
+  if (tlScrollTrigger) { tlScrollTrigger.kill(); tlScrollTrigger = null; }
+  tlScrollTrigger = ScrollTrigger.create({
+    trigger: containerEl,
+    start: 'top top',
+    end: 'bottom bottom',
+    scrub: true,
+    animation: tlMasterTl,
+    onToggle: self => {
+      tlSectionEl.classList.toggle('is-active', self.isActive);
+      if (!self.isActive) clearTimelineOverlays();
+    }
+  });
+
+  // Reflect current scroll position immediately (handles reloads mid-page).
+  tlSectionEl.classList.toggle('is-active', tlScrollTrigger.isActive);
+  applyFrame();
+}
+
+// Entrance animation for the intro section
+window.addEventListener('DOMContentLoaded', () => {
+  const introInner = document.querySelector('.tl-intro-inner');
+  const introSection = document.querySelector('.tl-intro-section');
+  if (introInner && introSection) {
+    const observer = new IntersectionObserver(
+      entries => { if (entries[0].isIntersecting) introInner.classList.add('is-visible'); },
+      { threshold: 0.3 }
+    );
+    observer.observe(introSection);
+  }
+});
+
+// Initialize on load — reset scroll first so browser restoration doesn't start mid-timeline.
+window.addEventListener('DOMContentLoaded', () => {
+  if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
+  if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
+  window.scrollTo(0, 0);
+  initPolicyTimeline();
+});
+
+// Reinitialize on resize so mobile/desktop layout constants stay correct.
+let tlResizeTimer = null;
+window.addEventListener('resize', () => {
+  clearTimeout(tlResizeTimer);
+  tlResizeTimer = setTimeout(() => {
+    const svgEl = document.getElementById('timeline-viz');
+    if (svgEl) svgEl.innerHTML = '';
+    resizeRiverCanvas();
+    clearTimelineOverlays();
+    if (tlScrollTrigger) { tlScrollTrigger.kill(); tlScrollTrigger = null; }
+    if (tlMasterTl) { tlMasterTl.kill(); tlMasterTl = null; }
+    tlInitialized = false;
+    initPolicyTimeline();          // recreates the ScrollTrigger
+    if (window.ScrollTrigger) ScrollTrigger.refresh();
+  }, 250);
+});
+</script>
+</body>
+</html>
