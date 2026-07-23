@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>From the Word to the Law</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=DM+Sans:ital,wght@0,400;0,500;0,600;1,400&family=Lora:ital,wght@0,400;0,500;1,400&family=Crimson+Text:ital,wght@0,400;0,600;1,400&family=Space+Mono&display=swap" rel="stylesheet">
@@ -54,19 +54,27 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 }
 
 .tl-intro-inner {
-  position: relative;
+  /* Fixed (not in page flow) so it never moves with raw scroll. Its only motion
+     comes from applyFrame, driven by the SAME camTy that draws the lake — so it
+     rides the lake in perfect lockstep, with no independent movement. */
+  position: fixed;
+  top: 50%; left: 0; right: 0;
   z-index: 3;
   max-width: 880px;
   margin: 0 auto;
-  padding: 16vh 1.25rem 0;
+  padding: 0 1.25rem;
+  text-align: center;
+  pointer-events: none;
   opacity: 0;
-  transform: translateY(24px);
-  transition: opacity 0.9s ease, transform 0.9s ease;
+  /* NB: no transform in the transition. applyFrame sets transform every frame to
+     lock the block to the lake; a transform transition would make it lag ~0.9s
+     behind the lake while scrolling (reads as independent drift). Entrance is a
+     pure opacity fade instead. */
+  transition: opacity 0.9s ease;
 }
 
 .tl-intro-inner.is-visible {
   opacity: 1;
-  transform: translateY(0);
 }
 
 .tl-section-pre {
@@ -197,23 +205,11 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 .hero-bird-1 { animation: heroBirdDrift1 55s ease-in-out infinite; }
 .hero-bird-2 { animation: heroBirdDrift2 70s ease-in-out infinite -20s; }
 
-.hero-river-wrap {
-  position: absolute;
-  top: 0;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(880px, 90vw);
-  height: calc(100% + 60vh);
-  z-index: 2;
-  pointer-events: none;
-}
-
-#hero-river-svg { display: block; width: 100%; height: 100%; }
-
-/* The hero river and ship are no longer drawn here — the single fixed
-   #river-canvas + the SVG .tl-ship (both in .tl-viz-wrapper) provide one
-   continuous river and boat through the hero and the timeline. Only the
-   decorative US map remains in #hero-river-svg. */
+/* The US-shaped lake, the river, and the boat are all drawn on the single fixed
+   #river-canvas by the timeline engine (see drawRiver / drawLake / .tl-ship).
+   The lake is the head of the current: it lives in the same world space as the
+   river band, so it flows away upward as the camera follows the ship downstream.
+   No hero SVG map/river/ship element exists any more. */
 
 .tl-timeline-container {
   position: relative;
@@ -597,24 +593,19 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 }
 
 @media(max-width:640px) {
-  .policy-item.right {
-    left: 50%;
-    right: auto;
-    top: auto;
-    bottom: max(14px, calc(env(safe-area-inset-bottom) + 10px));
-    transform: translateX(-50%);
-  }
+  /* Phone card placement is handled in JS (centred horizontally, dropped just
+     below the node) so it pans with the river trail. The old bottom-dock rule
+     that used to live here couldn't work — a `bottom`-anchored card still pans
+     away with the card layer's per-frame translateY — so it's gone. These rules
+     just cap the card/photo size so a tall card stays inside the viewport. */
   .margin-card, .landmark-card {
     max-height: 52vh;
     overflow: auto;
     padding: 1.1rem 1rem 1rem;
   }
-  /* Phones: keep the photo (don't hide it) but make it compact so it doesn't
-     swamp the bottom-anchored card. */
   .policy-figure, .policy-figure-landmark { max-width: 90vw; margin-bottom: 0.5rem; }
   .policy-photo { max-height: 22vh; }
   .policy-caption { font-size: 0.55rem; margin-top: 0.35rem; }
-  .policy-item.right.active { animation: none; }
 }
 
 /* ── ERA WORLD PANELS ────────────────────────────────────────────────── */
@@ -836,6 +827,22 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 @media(max-width:768px) {
   #tl-recap { padding: 2.5rem 1.5rem 10vh; }
 }
+
+/* ── REDUCED MOTION ──────────────────────────────────────────────────────
+   The scroll-scrubbed river/timeline is reader-driven (not autoplaying), so it
+   stays. What we silence here is the *ambient, involuntary* motion: drifting
+   clouds/birds, the pulsing scroll cue, the completion pulse, and long CSS
+   transitions. The bird frame-swap interval is stopped separately in JS. */
+@media (prefers-reduced-motion: reduce) {
+  .hero-cloud,
+  .hero-bird-1, .hero-bird-2 { animation: none !important; }
+  .hero-bird { display: none; }
+  .tl-scroll-line { animation: none !important; opacity: 0.7; }
+  .tl-viz-wrapper.tl-complete #timeline-viz { animation: none !important; }
+  .pulse-entry { animation: none !important; }
+  body { transition: none !important; }
+  .tl-intro-inner { transition: opacity 0.01ms linear !important; }
+}
 </style>
 </head>
 <body>
@@ -851,23 +858,6 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
       <div class="hero-bird hero-bird-2">
         <img class="hero-bird-frame" src="images/bird-frames/f001.png" alt="">
       </div>
-    </div>
-    <div class="hero-river-wrap" aria-hidden="true">
-      <svg id="hero-river-svg" viewBox="0 0 800 1260" preserveAspectRatio="xMidYMin slice">
-        <defs>
-          <filter id="heroWaterTurb" x="-20%" y="-20%" width="140%" height="140%">
-            <feTurbulence type="fractalNoise" baseFrequency="0.012 0.03" numOctaves="2" seed="7" result="turb">
-              <animate attributeName="baseFrequency" dur="22s" values="0.012 0.03;0.017 0.038;0.012 0.03" repeatCount="indefinite"/>
-            </feTurbulence>
-            <feDisplacementMap in="SourceGraphic" in2="turb" scale="6" xChannelSelector="R" yChannelSelector="G"/>
-          </filter>
-        </defs>
-        <g id="hero-map-river-group">
-        <path id="hero-us-map" filter="url(#heroWaterTurb)" transform="translate(80,60)"
-          d="M510.5,294.3L514.8,307.0L526.4,323.5L527.7,330.7L537.8,348.3L539.0,363.4L537.1,370.9L539.1,367.6L534.1,377.1L536.3,372.5L527.0,374.3L523.8,367.1L518.1,365.5L514.6,358.2L511.3,357.2L510.7,350.2L508.6,354.1L500.7,343.0L504.3,337.2L502.6,338.2L500.4,335.8L502.2,338.7L500.7,342.0L498.7,338.5L498.6,323.0L484.6,310.3L476.1,308.2L475.6,311.2L466.0,315.1L467.5,316.3L471.4,313.8L467.1,316.9L450.0,307.2L428.6,311.3L431.6,310.0L427.9,304.5L426.7,310.0L411.7,310.3L405.2,316.3L407.8,318.2L409.9,314.9L411.5,317.2L413.4,316.2L410.9,321.1L407.8,321.7L417.0,327.7L411.9,331.8L413.4,327.9L406.0,326.4L401.3,330.1L398.4,326.4L396.6,327.1L393.0,331.1L386.8,327.8L389.6,328.3L382.8,321.5L379.8,322.0L380.1,320.2L375.4,321.6L377.8,323.5L374.9,324.7L359.1,321.9L343.0,328.1L346.1,325.8L342.5,325.5L342.6,322.0L340.3,323.3L341.0,329.0L337.5,331.9L343.0,328.7L317.3,346.0L310.7,354.3L308.4,362.1L311.2,376.5L308.4,369.5L308.7,357.8L312.5,349.6L321.2,342.4L316.6,342.3L314.5,346.5L311.6,346.4L313.3,347.7L311.1,350.8L306.8,350.4L310.2,352.8L308.0,358.3L305.0,359.0L307.9,359.1L307.5,368.7L311.2,376.8L308.2,380.0L285.6,371.3L281.0,362.0L280.5,354.0L270.6,343.0L266.3,330.7L257.3,320.5L245.4,318.2L241.2,319.7L234.7,330.4L230.7,329.3L217.5,319.3L213.6,304.6L196.2,285.6L174.4,282.7L173.5,289.3L137.8,284.1L94.9,258.9L96.7,255.8L67.1,252.3L65.1,239.7L59.5,232.3L55.7,231.2L55.2,226.6L48.5,224.0L44.6,218.2L32.6,212.9L34.7,204.7L25.0,184.0L27.7,174.8L22.7,169.3L23.9,160.6L27.8,166.7L25.6,158.2L27.6,156.6L25.5,155.9L23.9,160.0L19.3,155.8L20.8,152.4L15.3,139.8L17.9,126.9L14.5,116.4L22.6,103.3L23.6,81.8L32.4,67.9L43.9,35.4L48.4,36.4L43.3,34.7L44.9,29.6L45.0,33.5L47.6,29.1L45.4,25.6L48.3,25.8L46.2,23.7L45.1,25.1L46.1,3.3L52.3,8.3L60.5,10.6L62.2,13.8L63.9,12.1L64.3,16.1L56.9,22.1L59.4,22.3L57.4,21.7L65.2,16.1L62.4,24.8L60.9,23.6L60.2,26.5L59.3,24.1L60.5,27.0L64.9,24.5L65.1,19.8L68.3,16.0L65.6,7.7L68.9,6.6L67.4,0.0L139.3,17.8L214.6,30.0L317.5,36.7L335.0,36.8L334.9,31.1L336.9,31.3L340.1,40.5L348.5,43.6L356.4,41.8L360.0,42.9L362.8,47.5L365.8,45.3L370.8,49.7L377.5,46.4L378.8,48.5L391.5,49.0L378.2,56.5L366.4,68.4L368.0,69.9L378.6,65.3L378.1,70.7L380.2,69.1L383.6,70.8L407.2,55.7L410.0,56.6L405.0,60.0L402.9,66.7L406.2,63.3L404.9,65.4L409.6,64.1L414.8,69.4L420.3,69.8L436.5,63.3L438.7,63.0L438.5,67.3L447.5,65.5L446.9,70.8L451.1,73.0L453.8,71.2L454.9,73.4L443.0,73.1L442.4,76.4L434.1,73.5L426.6,76.6L423.6,81.9L424.0,77.6L419.9,81.2L419.1,78.8L410.6,96.2L411.0,99.0L420.3,86.9L413.2,118.1L415.2,131.9L421.7,141.4L428.0,137.9L431.8,129.5L432.0,122.0L426.9,104.7L430.6,91.4L435.3,86.5L436.2,93.3L437.0,85.4L441.4,83.1L439.0,80.7L439.8,77.8L448.2,78.7L457.5,82.9L459.8,96.5L454.4,106.0L457.6,108.0L459.9,102.8L464.7,99.9L468.0,102.7L472.3,115.4L471.9,120.8L470.4,122.4L470.7,120.1L468.9,120.5L463.7,135.1L475.0,138.8L482.8,136.1L508.1,115.8L510.6,111.9L507.0,105.3L514.1,102.3L529.3,100.9L536.0,95.6L534.4,91.2L536.0,90.0L533.0,88.6L533.1,86.0L544.5,71.7L579.5,62.6L580.6,57.9L585.2,57.8L588.6,46.8L588.0,34.6L592.4,21.7L596.7,24.7L602.4,20.3L607.9,23.1L613.8,42.7L617.6,42.7L618.6,47.4L622.4,48.0L625.7,52.4L621.3,59.4L619.0,58.6L615.6,62.1L616.1,64.2L612.4,62.4L612.9,68.7L609.1,62.5L607.1,64.0L608.2,70.7L598.3,78.1L595.7,84.3L594.7,91.5L597.9,93.9L595.1,100.5L598.3,100.7L603.4,106.5L607.3,104.7L604.0,101.3L606.3,101.5L608.7,108.1L608.1,106.4L604.5,107.9L599.1,112.9L601.6,110.1L600.2,107.5L596.3,112.8L595.1,110.7L594.8,113.4L595.4,109.7L592.9,108.7L593.5,114.9L578.6,119.9L572.1,125.8L571.0,129.4L585.8,120.2L588.3,122.1L590.7,120.3L577.7,130.3L570.1,133.5L568.5,131.6L566.8,134.9L570.0,135.0L571.1,145.2L565.4,159.1L564.4,156.0L556.3,153.2L555.6,149.8L555.7,153.3L563.2,161.7L565.0,167.3L559.2,188.8L557.6,185.6L559.6,175.6L557.1,176.6L556.1,170.1L554.3,172.5L551.8,171.5L550.7,167.4L553.6,167.4L549.7,166.4L550.5,162.6L548.8,164.1L551.2,152.8L547.0,159.2L545.3,158.5L551.9,175.9L542.9,171.5L540.4,173.0L541.1,169.0L539.7,173.1L542.7,172.2L544.2,174.8L553.4,177.8L552.8,182.2L545.5,178.2L553.6,182.8L554.7,186.4L552.8,185.4L552.4,187.8L555.3,190.9L547.2,189.1L550.3,189.0L553.6,192.9L559.1,191.4L568.0,206.8L560.3,197.1L564.0,203.3L558.9,200.9L560.7,202.7L556.1,203.3L558.1,204.1L555.2,206.1L553.0,202.5L554.3,207.4L561.2,205.1L562.4,209.8L564.3,204.9L566.2,209.6L562.3,215.0L558.2,215.2L558.0,212.5L557.0,215.2L551.5,214.4L558.7,216.8L555.7,221.9L553.5,221.7L561.6,220.0L559.8,225.4L558.0,225.3L559.9,225.8L564.4,218.6L560.0,226.7L553.9,226.9L548.4,231.7L545.2,240.9L540.0,241.1L535.3,244.4L530.6,256.4L518.4,266.2L518.9,268.6L515.3,269.5L516.6,270.7L511.2,279.0L510.5,294.3Z"
-          fill="var(--river)" fill-opacity="0.35"></path>
-        </g>
-      </svg>
     </div>
     <div class="tl-intro-inner">
       <p class="tl-section-pre">From the word to the law</p>
@@ -1586,6 +1576,9 @@ const RIVER_COLOR = CSS.getPropertyValue('--river').trim();
 const SEA_COLOR = CSS.getPropertyValue('--sea').trim();
 const RIVER_W = 60;                    // river width in SVG units (path stroke is ~16)
 const SEA_TAIL_LEN = 520;              // SVG units the river widens into an estuary/sea past the last node
+// US silhouette (SVG-viewBox path, authored with a translate(80,60)); drawn on
+// the river canvas as the lake at the head of the current. See drawLake usage.
+const US_MAP_PATH_D = 'M510.5,294.3L514.8,307.0L526.4,323.5L527.7,330.7L537.8,348.3L539.0,363.4L537.1,370.9L539.1,367.6L534.1,377.1L536.3,372.5L527.0,374.3L523.8,367.1L518.1,365.5L514.6,358.2L511.3,357.2L510.7,350.2L508.6,354.1L500.7,343.0L504.3,337.2L502.6,338.2L500.4,335.8L502.2,338.7L500.7,342.0L498.7,338.5L498.6,323.0L484.6,310.3L476.1,308.2L475.6,311.2L466.0,315.1L467.5,316.3L471.4,313.8L467.1,316.9L450.0,307.2L428.6,311.3L431.6,310.0L427.9,304.5L426.7,310.0L411.7,310.3L405.2,316.3L407.8,318.2L409.9,314.9L411.5,317.2L413.4,316.2L410.9,321.1L407.8,321.7L417.0,327.7L411.9,331.8L413.4,327.9L406.0,326.4L401.3,330.1L398.4,326.4L396.6,327.1L393.0,331.1L386.8,327.8L389.6,328.3L382.8,321.5L379.8,322.0L380.1,320.2L375.4,321.6L377.8,323.5L374.9,324.7L359.1,321.9L343.0,328.1L346.1,325.8L342.5,325.5L342.6,322.0L340.3,323.3L341.0,329.0L337.5,331.9L343.0,328.7L317.3,346.0L310.7,354.3L308.4,362.1L311.2,376.5L308.4,369.5L308.7,357.8L312.5,349.6L321.2,342.4L316.6,342.3L314.5,346.5L311.6,346.4L313.3,347.7L311.1,350.8L306.8,350.4L310.2,352.8L308.0,358.3L305.0,359.0L307.9,359.1L307.5,368.7L311.2,376.8L308.2,380.0L285.6,371.3L281.0,362.0L280.5,354.0L270.6,343.0L266.3,330.7L257.3,320.5L245.4,318.2L241.2,319.7L234.7,330.4L230.7,329.3L217.5,319.3L213.6,304.6L196.2,285.6L174.4,282.7L173.5,289.3L137.8,284.1L94.9,258.9L96.7,255.8L67.1,252.3L65.1,239.7L59.5,232.3L55.7,231.2L55.2,226.6L48.5,224.0L44.6,218.2L32.6,212.9L34.7,204.7L25.0,184.0L27.7,174.8L22.7,169.3L23.9,160.6L27.8,166.7L25.6,158.2L27.6,156.6L25.5,155.9L23.9,160.0L19.3,155.8L20.8,152.4L15.3,139.8L17.9,126.9L14.5,116.4L22.6,103.3L23.6,81.8L32.4,67.9L43.9,35.4L48.4,36.4L43.3,34.7L44.9,29.6L45.0,33.5L47.6,29.1L45.4,25.6L48.3,25.8L46.2,23.7L45.1,25.1L46.1,3.3L52.3,8.3L60.5,10.6L62.2,13.8L63.9,12.1L64.3,16.1L56.9,22.1L59.4,22.3L57.4,21.7L65.2,16.1L62.4,24.8L60.9,23.6L60.2,26.5L59.3,24.1L60.5,27.0L64.9,24.5L65.1,19.8L68.3,16.0L65.6,7.7L68.9,6.6L67.4,0.0L139.3,17.8L214.6,30.0L317.5,36.7L335.0,36.8L334.9,31.1L336.9,31.3L340.1,40.5L348.5,43.6L356.4,41.8L360.0,42.9L362.8,47.5L365.8,45.3L370.8,49.7L377.5,46.4L378.8,48.5L391.5,49.0L378.2,56.5L366.4,68.4L368.0,69.9L378.6,65.3L378.1,70.7L380.2,69.1L383.6,70.8L407.2,55.7L410.0,56.6L405.0,60.0L402.9,66.7L406.2,63.3L404.9,65.4L409.6,64.1L414.8,69.4L420.3,69.8L436.5,63.3L438.7,63.0L438.5,67.3L447.5,65.5L446.9,70.8L451.1,73.0L453.8,71.2L454.9,73.4L443.0,73.1L442.4,76.4L434.1,73.5L426.6,76.6L423.6,81.9L424.0,77.6L419.9,81.2L419.1,78.8L410.6,96.2L411.0,99.0L420.3,86.9L413.2,118.1L415.2,131.9L421.7,141.4L428.0,137.9L431.8,129.5L432.0,122.0L426.9,104.7L430.6,91.4L435.3,86.5L436.2,93.3L437.0,85.4L441.4,83.1L439.0,80.7L439.8,77.8L448.2,78.7L457.5,82.9L459.8,96.5L454.4,106.0L457.6,108.0L459.9,102.8L464.7,99.9L468.0,102.7L472.3,115.4L471.9,120.8L470.4,122.4L470.7,120.1L468.9,120.5L463.7,135.1L475.0,138.8L482.8,136.1L508.1,115.8L510.6,111.9L507.0,105.3L514.1,102.3L529.3,100.9L536.0,95.6L534.4,91.2L536.0,90.0L533.0,88.6L533.1,86.0L544.5,71.7L579.5,62.6L580.6,57.9L585.2,57.8L588.6,46.8L588.0,34.6L592.4,21.7L596.7,24.7L602.4,20.3L607.9,23.1L613.8,42.7L617.6,42.7L618.6,47.4L622.4,48.0L625.7,52.4L621.3,59.4L619.0,58.6L615.6,62.1L616.1,64.2L612.4,62.4L612.9,68.7L609.1,62.5L607.1,64.0L608.2,70.7L598.3,78.1L595.7,84.3L594.7,91.5L597.9,93.9L595.1,100.5L598.3,100.7L603.4,106.5L607.3,104.7L604.0,101.3L606.3,101.5L608.7,108.1L608.1,106.4L604.5,107.9L599.1,112.9L601.6,110.1L600.2,107.5L596.3,112.8L595.1,110.7L594.8,113.4L595.4,109.7L592.9,108.7L593.5,114.9L578.6,119.9L572.1,125.8L571.0,129.4L585.8,120.2L588.3,122.1L590.7,120.3L577.7,130.3L570.1,133.5L568.5,131.6L566.8,134.9L570.0,135.0L571.1,145.2L565.4,159.1L564.4,156.0L556.3,153.2L555.6,149.8L555.7,153.3L563.2,161.7L565.0,167.3L559.2,188.8L557.6,185.6L559.6,175.6L557.1,176.6L556.1,170.1L554.3,172.5L551.8,171.5L550.7,167.4L553.6,167.4L549.7,166.4L550.5,162.6L548.8,164.1L551.2,152.8L547.0,159.2L545.3,158.5L551.9,175.9L542.9,171.5L540.4,173.0L541.1,169.0L539.7,173.1L542.7,172.2L544.2,174.8L553.4,177.8L552.8,182.2L545.5,178.2L553.6,182.8L554.7,186.4L552.8,185.4L552.4,187.8L555.3,190.9L547.2,189.1L550.3,189.0L553.6,192.9L559.1,191.4L568.0,206.8L560.3,197.1L564.0,203.3L558.9,200.9L560.7,202.7L556.1,203.3L558.1,204.1L555.2,206.1L553.0,202.5L554.3,207.4L561.2,205.1L562.4,209.8L564.3,204.9L566.2,209.6L562.3,215.0L558.2,215.2L558.0,212.5L557.0,215.2L551.5,214.4L558.7,216.8L555.7,221.9L553.5,221.7L561.6,220.0L559.8,225.4L558.0,225.3L559.9,225.8L564.4,218.6L560.0,226.7L553.9,226.9L548.4,231.7L545.2,240.9L540.0,241.1L535.3,244.4L530.6,256.4L518.4,266.2L518.9,268.6L515.3,269.5L516.6,270.7L511.2,279.0L510.5,294.3Z';
 const SEA_TAIL_WIDEN = 2.6;            // river widens to (1 + this) × RIVER_W by the time it reaches open water
 const SEA_SHIP_TRAVEL = 680;           // SVG units the ship keeps sailing during the outro — comfortably past
                                         // SEA_TAIL_LEN so the camera fully clears the estuary into open water
@@ -1640,6 +1633,8 @@ let tlScrollTrigger = null;
 let tlSectionActive = false; // mirrors ScrollTrigger's is-active — gates the outro reveal below so it
                               // can't reassert text/sea visibility after the section has deactivated
 let tlMasterTl = null;
+let tlIdleRockTween = null;   // perpetual idle "moored" rock tween — killed/recreated on (re)init
+let tlShipTicker = null;      // gsap.ticker callback that renders the ship each frame
 
 // Canvas river references (set on each init).
 let riverCanvas = null;
@@ -2157,17 +2152,56 @@ const pathBottomY = points[points.length - 1].y;
     seaSamples.push({ x: cx, y: cy, tSea });
   }
 
-  function drawRiver(camTx, camTy, camScale, ctm) {
+  // ── SOURCE LAKE ────────────────────────────────────────────────────────
+  // The US silhouette is drawn on the river canvas as the HEAD of the current,
+  // in the SAME world space as the river band. Its drain (lakeMouth, in the
+  // map's own SVG-viewBox coords) is pinned to the river's origin — unifiedPoints[0],
+  // where the band begins — so the river literally pours out of the lake. Because
+  // it rides the camera transform, it flows away upward as the ship sails down.
+  const lakePath  = (typeof Path2D !== 'undefined') ? new Path2D(US_MAP_PATH_D) : null;
+  const LAKE_S    = 1.56;                      // map units → world units (30% larger)
+  const lakeMouth = { x: 345, y: 392 };        // source point (map's translated 80,60 space): inland, within Texas — the river is born inside the land and flows down out through the coast
+  const lakeSrc   = unifiedPoints[0];          // river origin in world space (600, seam−tail)
+  // world = LAKE_S·raw + lakeB  (the map path was authored with a translate(80,60))
+  const lakeBX = LAKE_S * (80 - lakeMouth.x) + lakeSrc.x;
+  const lakeBY = LAKE_S * (60 - lakeMouth.y) + lakeSrc.y;
+  // Vertical centre of the US silhouette in world space. The river's mouth is
+  // pinned to screen-centre, which would leave the lake body hugging the top of
+  // the frame; a hero framing lift (see applyFrame) pushes the scene down so the
+  // lake's CENTRE — not its mouth — sits mid-page at rest.
+  const LAKE_CENTER_RAWY = 190;                          // (minY+maxY)/2 of the US path (0..380)
+  const lakeCenterWorldY = LAKE_S * LAKE_CENTER_RAWY + lakeBY;
+
+  function drawRiver(camTx, camTy, camScale, ctm, liftPx) {
     if (!riverCtx || !ctm) return;
+    liftPx = liftPx || 0;   // hero framing offset (screen px, down) applied to lake + river
     const dpr = window.devicePixelRatio || 1;
     riverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
     const cw = riverCanvas.width / dpr, ch = riverCanvas.height / dpr;
     riverCtx.clearRect(0, 0, cw, ch);
 
+    // ── source lake — filled US silhouette at the river head, composed through
+    // the same world→camera→screen transform, then the river band draws on top
+    // so the drain seam is covered (same flat color = one continuous body). ──
+    if (lakePath) {
+      const scaleV = camScale * LAKE_S;
+      const txV = camScale * lakeBX + camTx;
+      const tyV = camScale * lakeBY + camTy;
+      riverCtx.setTransform(
+        dpr * (ctm.a * scaleV), dpr * (ctm.b * scaleV),
+        dpr * (ctm.c * scaleV), dpr * (ctm.d * scaleV),
+        dpr * (ctm.a * txV + ctm.c * tyV + ctm.e),
+        dpr * (ctm.b * txV + ctm.d * tyV + ctm.f + liftPx)
+      );
+      riverCtx.fillStyle = RIVER_COLOR;
+      riverCtx.fill(lakePath);
+      riverCtx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    }
+
     const toScreen = (sx, sy) => {
       const vx = camTx + camScale * sx;
       const vy = camTy + camScale * sy;
-      return { x: ctm.a * vx + ctm.c * vy + ctm.e, y: ctm.b * vx + ctm.d * vy + ctm.f };
+      return { x: ctm.a * vx + ctm.c * vy + ctm.e, y: ctm.b * vx + ctm.d * vy + ctm.f + liftPx };
     };
 
     // ── main river — unchanged flat-blue band through the policy nodes ──
@@ -2280,17 +2314,56 @@ const pathBottomY = points[points.length - 1].y;
   // follow camera is derived from it, so this is the only animated state.
   const nav = { frac: 0 };
 
+  // ── SHIP RENDER + IDLE ROCK ───────────────────────────────────────────
+  // applyFrame writes the ship's path-derived state into shipRender; renderShip()
+  // composes the final transform. A small heading wobble (idleRock.phase) is
+  // layered on ONLY while the boat is moored at the source and fades out as the
+  // reader scrolls in (shipRender.idle). It is purely cosmetic — it never touches
+  // position or the camera — so nav.frac stays the single driver of movement
+  // (CLAUDE.md constraint #1). renderShip is also registered on gsap.ticker so the
+  // rock keeps animating at rest, when applyFrame (scroll-driven) is idle.
+  const shipRender = { x: 0, y: 0, angle: 0, idle: 0, shown: false };
+  const idleRock = { phase: 0 };
+  const prefersReducedMotion = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const ROCK_AMP_DEG = 3;   // gentle ± heading wobble at the source
+  function renderShip() {
+    if (!shipRender.shown) return;
+    const rock = Math.sin(idleRock.phase) * ROCK_AMP_DEG * shipRender.idle;
+    ship.attr('transform',
+      `translate(${shipRender.x - SHIP_SIZE / 2},${shipRender.y - SHIP_SIZE / 2}) rotate(${shipRender.angle + SHIP_ANGLE_OFFSET + rock} ${SHIP_SIZE / 2} ${SHIP_SIZE / 2})`);
+  }
+  // Clean up any tween/ticker left by a previous init (resize / font-swap reinit
+  // runs a fresh closure — without this each reinit would leak another perpetual
+  // tween and another ticker callback bound to a now-detached ship node).
+  if (tlIdleRockTween) { tlIdleRockTween.kill(); tlIdleRockTween = null; }
+  if (tlShipTicker) { gsap.ticker.remove(tlShipTicker); tlShipTicker = null; }
+  if (!prefersReducedMotion) {
+    tlShipTicker = renderShip;
+    gsap.ticker.add(renderShip);
+    tlIdleRockTween = gsap.to(idleRock, { phase: Math.PI * 2, duration: 3.8, repeat: -1, ease: 'none' });
+  }
+
   // Hero DOM elements faded by applyFrame (driven by the same nav.frac, so no
   // second animated driver). Cached once here.
   const tlHeroInner  = document.querySelector('.tl-intro-inner');
   const tlHeroCue    = document.querySelector('.tl-scroll-cue');
-  const tlHeroMapGrp = document.getElementById('hero-map-river-group');
 
   // ── CLOSING-RECAP STATE ───────────────────────────────────────────────
   let T_FOLLOW_END = Infinity, outroDur = 1;
   let recapPathEl = null, recapPathLen = 0, recapNodeEls = null;
   let recapEyebrow = null, recapLine1 = null, recapLine2 = null, recapNote = null;
   let recapEngaged = false;   // true while the recap is faded in; gates a one-time scene restore
+
+  // Cached SVG→screen matrix. getScreenCTM() forces a style/layout flush, and it
+  // was being called every scroll frame — but the matrix is constant while the
+  // fixed .tl-viz-wrapper stays put. It only changes on resize or a font swap,
+  // and both of those run reinitPolicyTimeline() (a fresh closure), so caching it
+  // here for the life of this init is safe and takes the read off the hot path.
+  let tlScreenCTM = null;
+  function getScreenCTMCached() {
+    if (!tlScreenCTM) tlScreenCTM = svgEl.getScreenCTM();
+    return tlScreenCTM;
+  }
 
   function applyFrame() {
     if (!tlSectionEl || !tlMasterTl) return;
@@ -2305,19 +2378,21 @@ const pathBottomY = points[points.length - 1].y;
       : Math.min(1, Math.max(0, (t - T_FOLLOW_END) / outroDur));
 
     // ── SHIP POSITION (MotionPathPlugin) — also feeds the follow camera ──
-    let shipX = unifiedPoints[0].x, shipY = unifiedPoints[0].y, shipAngle = 0;
-    if (followPhase) {
-      const pos = MotionPathPlugin.getPositionOnPath(rawPath, Math.min(1, Math.max(0, nav.frac)), true);
-      shipX = pos.x; shipY = pos.y; shipAngle = pos.angle;
-      if (outroT > 0) {
-        const seaProgress = easeInOut(outroT) * SEA_SHIP_TRAVEL;
-        shipY += seaProgress;
-        // Match the estuary's own straightening (see seaSamples above) so the
-        // boat's heading turns to due-south in step with the channel instead
-        // of holding the river's last-bend angle while it drifts vertically.
-        const straightenAmt = Math.min(1, (seaProgress / SEA_TAIL_LEN) / SEA_STRAIGHTEN_T);
-        shipAngle += (90 - shipAngle) * straightenAmt;
-      }
+    // Position AND heading come straight from the path at nav.frac, including at
+    // rest (frac 0). Previously the rest angle was hard-coded to 0 while the
+    // sailing angle used the path tangent, so the boat snapped ~90° (horizontal→
+    // vertical) on the first scroll pixel. Reading the tangent at frac 0 too means
+    // it already points down-river at the source, with no discontinuity.
+    const pos = MotionPathPlugin.getPositionOnPath(rawPath, Math.min(1, Math.max(0, nav.frac)), true);
+    let shipX = pos.x, shipY = pos.y, shipAngle = pos.angle;
+    if (followPhase && outroT > 0) {
+      const seaProgress = easeInOut(outroT) * SEA_SHIP_TRAVEL;
+      shipY += seaProgress;
+      // Match the estuary's own straightening (see seaSamples above) so the
+      // boat's heading turns to due-south in step with the channel instead
+      // of holding the river's last-bend angle while it drifts vertically.
+      const straightenAmt = Math.min(1, (seaProgress / SEA_TAIL_LEN) / SEA_STRAIGHTEN_T);
+      shipAngle += (90 - shipAngle) * straightenAmt;
     }
 
     // ── HERO ⇄ TIMELINE GATE ──────────────────────────────────────────────
@@ -2326,20 +2401,63 @@ const pathBottomY = points[points.length - 1].y;
     // the extended path. The hero DOM fades are driven off the SAME nav.frac.
     const inTimeline = nav.frac >= f_seam - 1e-4;
     const heroP = f_seam > 0 ? Math.min(1, Math.max(0, nav.frac / f_seam)) : 1;
-    if (tlHeroInner)  tlHeroInner.style.opacity  = String(1 - Math.min(1, heroP / 0.5));
-    if (tlHeroCue)    tlHeroCue.style.opacity    = String(1 - Math.min(1, heroP / 0.5));
-    if (tlHeroMapGrp) tlHeroMapGrp.style.opacity = String(0.16 + 0.84 * Math.min(1, heroP / 0.65));
+    // At rest (heroP≈0) leave inline opacity unset so the CSS `.is-visible`
+    // entrance fade (0→1 over 0.9s) owns the title/cue. Only once the reader
+    // starts scrolling do we take over with the inline scroll-out fade. Clearing
+    // it again at the top restores class control (clean fade back in on scroll-up).
+    const heroFade = String(1 - Math.min(1, heroP / 0.5));
+    if (tlHeroInner)  tlHeroInner.style.opacity = heroP <= 0.001 ? '' : heroFade;
+    if (tlHeroCue)    tlHeroCue.style.opacity   = heroP <= 0.001 ? '' : heroFade;
+    // The lake needs no opacity handling: it's drawn on the river canvas in world
+    // space (see drawLake in drawRiver) and simply pans away with the current.
 
-    // ── CAMERA ── vertical-only follow of the ship; no overview/zoom phase ──
-    const camTx = 0, camScale = 1, camTy = H / 2 - shipY;
+    // ── HERO FRAMING LIFT ─────────────────────────────────────────────────
+    // The river's mouth is pinned to screen-centre, which alone leaves the lake
+    // hugging the top of the frame. Push the whole hero scene (lake, river, ship,
+    // title, AND the SVG cameraGroup) DOWN so the lake's centre sits mid-page at
+    // rest, then ease that lift to 0 by the seam so the timeline frames normally.
+    // Everything is shifted by the SAME lift so they stay locked together.
+    const screenCTM = getScreenCTMCached();
+    let heroLiftPx = 0;
+    if (screenCTM && screenCTM.d) {
+      const camTy0r = H / 2 - unifiedPoints[0].y;            // rest camera translate
+      const lakeCenterScreenRest = screenCTM.d * (camTy0r + lakeCenterWorldY) + screenCTM.f;
+      const restLiftPx = window.innerHeight / 2 - lakeCenterScreenRest;
+      heroLiftPx = restLiftPx * (1 - heroP);                 // full at rest → 0 at the seam
+    }
+    const liftVB = (screenCTM && screenCTM.d) ? heroLiftPx / screenCTM.d : 0;  // px → viewBox units
+
+    // ── CAMERA ── vertical-only follow of the ship; no overview/zoom phase.
+    // camTy carries the framing lift so the SVG path/overview align with the
+    // lifted canvas river (no exposed guide-path stripe).
+    const camTx = 0, camScale = 1, camTy = H / 2 - shipY + liftVB;
     cameraGroup.attr('transform', `translate(${camTx},${camTy}) scale(${camScale})`);
 
-    // ── RIVER ── redraw the flat-blue band under the same camera transform ──
-    drawRiver(camTx, camTy, camScale, svgEl.getScreenCTM());
+    // ── RIVER ── redraw the flat-blue band. The canvas river/lake are placed in
+    // screen space, so they take the lift directly (drawRiver adds heroLiftPx);
+    // camTy already includes liftVB, so passing lift again would double it — the
+    // canvas path is built from camTy too. Pass 0 lift to drawRiver and rely on
+    // camTy, keeping canvas + SVG on the identical transform.
+    drawRiver(camTx, camTy, camScale, screenCTM, 0);
+
+    // ── TITLE LOCKED TO THE LAKE ──────────────────────────────────────────
+    // position:fixed, so it has no scroll motion of its own. Drive it by the same
+    // camTy + heroLiftPx that place the lake → it rides the lake in exact lockstep.
+    if (tlHeroInner && screenCTM) {
+      // Fit the block inside the lake: pin its centre to the lake's centre (which
+      // the framing lift puts mid-viewport at rest) and track it on scroll, so it
+      // rides the lake in lockstep and never spills past the coastline.
+      const lakeCenterScreen = screenCTM.d * (camTy + lakeCenterWorldY) + screenCTM.f;
+      const delta = lakeCenterScreen - window.innerHeight / 2;
+      tlHeroInner.style.transform = `translateY(calc(-50% + ${delta}px))`;
+    }
 
     // ── LANE LABELS ──
     const laneFollowRaw = t <= T_OV ? 0 : t <= T_ZOOM ? (t - T_OV) / ZOOM_DUR : 1;
     const laneFollowT = laneFollowRaw <= 0 ? 0 : laneFollowRaw >= 1 ? 1 : easeInOut(laneFollowRaw);
+    // Hidden through the hero (where they'd collapse onto one another at the top
+    // and read as garble); fade in over the last stretch as the timeline begins.
+    const laneReveal = Math.max(0, Math.min(1, (heroP - 0.85) / 0.15));
     laneLabels
       .attr('x', d => {
         const cameraX = d.x * camScale + camTx;
@@ -2349,23 +2467,33 @@ const pathBottomY = points[points.length - 1].y;
         return d.overviewX + (targetX - d.overviewX) * laneFollowT;
       })
       .style('opacity', d => {
-        if (laneFollowT < 1) return 1;
+        if (laneReveal <= 0) return 0;
+        if (laneFollowT < 1) return laneReveal;
         const cameraX = d.x * camScale + camTx;
-        return (cameraX >= -80 && cameraX <= W + 80) ? 1 : 0;
+        return (cameraX >= -80 && cameraX <= W + 80) ? laneReveal : 0;
       });
 
     // ── OVERVIEW HIGHLIGHT FADE ──
     const overviewFade = t <= T_OV ? 1 : t <= T_ZOOM ? 1 - (t - T_OV) / ZOOM_DUR : 0;
     overviewBgPath.style('opacity', overviewFade);
 
-    // ── SHIP RENDER ──
-    ship.style('display', followPhase ? null : 'none');
-    if (followPhase) {
-      const sailAwayT = easeInOut(Math.min(1, outroT / 0.9));
-      const shipOpacity = 1 - sailAwayT;
-      ship.style('opacity', String(shipOpacity));
-      ship.attr('transform', `translate(${shipX - SHIP_SIZE / 2},${H / 2 - SHIP_SIZE / 2}) rotate(${shipAngle + SHIP_ANGLE_OFFSET} ${SHIP_SIZE / 2} ${SHIP_SIZE / 2})`);
-    }
+    // ── SHIP RENDER ── one boat rides the whole current: it's moored at the lake
+    // mouth at rest (screen centre) and sails downstream once scrolling begins.
+    ship.style('display', null);
+    const sailAwayT = followPhase ? easeInOut(Math.min(1, outroT / 0.9)) : 0;
+    ship.style('opacity', String(1 - sailAwayT));
+    // Ship rides at screen-centre (camera keeps it there); add the hero framing
+    // lift (converted screen px → viewBox units) so it stays at the lake mouth.
+    const shipLiftVB = screenCTM && screenCTM.d ? heroLiftPx / screenCTM.d : 0;
+    // Hand the path-derived state to renderShip (also driven by gsap.ticker so the
+    // idle rock animates at rest). The rock is full at the source and eases out by
+    // the time the hero is a quarter scrolled in, so the sailing boat never wobbles.
+    shipRender.x = shipX;
+    shipRender.y = H / 2 + shipLiftVB;
+    shipRender.angle = shipAngle;
+    shipRender.idle = Math.max(0, 1 - heroP / 0.25);
+    shipRender.shown = true;
+    renderShip();
 
     // ── NODE STATE ──
     let passedIndex = -1, activeIndex = -1;
@@ -2536,13 +2664,24 @@ const pathBottomY = points[points.length - 1].y;
       const lane = getPolicyDoorLane(policy);
       const dir  = i % 2 === 0 ? 1 : -1;
       const nodeX = ctm.a * policyPoints[i].x + ctm.e;
+      // Desktop/tablet: alternate the card left/right of its node. Phones have no
+      // horizontal room beside a centred river, so the beside-node math just
+      // clamps every card into a narrow pile on top of the ship — instead, centre
+      // the card and (in `tops` below) drop it just under the node. `.left`/`.right`
+      // reflect the intended side; inline left/top still own actual placement.
       const rawLeft = dir === 1 ? nodeX + CARD_GAP : nodeX - CARD_GAP - CARD_WIDTH;
-      const left = Math.max(EDGE_MARGIN, Math.min(window.innerWidth - CARD_WIDTH - EDGE_MARGIN, rawLeft));
+      const left = isMobileTimeline
+        ? Math.max(EDGE_MARGIN, (window.innerWidth - CARD_WIDTH) / 2)
+        : Math.max(EDGE_MARGIN, Math.min(window.innerWidth - CARD_WIDTH - EDGE_MARGIN, rawLeft));
 
       const cardEl = document.createElement('div');
-      cardEl.className = 'policy-item';
+      cardEl.className = `policy-item ${dir === 1 ? 'right' : 'left'}`;
       cardEl.dataset.shown = '0';
-      cardEl.style.cssText = `position:absolute;left:${left}px;top:0;width:${CARD_WIDTH}px;opacity:0;transform:none;will-change:transform,opacity;`;
+      // No per-card will-change: the parent .tl-card-layer is what pans every
+      // frame (it keeps will-change:transform); promoting all ~34 cards to their
+      // own compositor layers just burns memory, especially on mobile. Each card
+      // only animates briefly during its reveal, which doesn't need a standing hint.
+      cardEl.style.cssText = `position:absolute;left:${left}px;top:0;width:${CARD_WIDTH}px;opacity:0;transform:none;`;
 
       // Archival photo + credit line, shared by both card treatments. Wrapped
       // in a <figure> so the image and its caption reveal (and pan) as one unit.
@@ -2585,8 +2724,16 @@ const pathBottomY = points[points.length - 1].y;
       cardEl._pulseRing = pulseRingNodes[i];
     });
 
+    // Node's screen radius + a small gap — used on mobile to seat the card just
+    // beneath the node rather than centred over it (where it would cover the ship).
+    const nodeGapPx = nodeRadius * ctm.d + 14;
     const tops = tlCards.map((cardEl, i) => {
       const baseY = ctm.d * policyPoints[i].y + ctm.f;
+      if (isMobileTimeline) {
+        // Card top sits just below the node; the ship (locked to screen-centre)
+        // stays visible above it as the reader arrives at each policy.
+        return baseY + nodeGapPx;
+      }
       const box = cardEl.querySelector('.card-box');
       const boxCenter = box.offsetTop + box.offsetHeight / 2;
       return baseY - boxCenter;
@@ -2801,29 +2948,46 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 });
 
+// Full teardown + reinit. Every one-time layout measurement (era-gap heights,
+// card vertical centering) is captured inside initPolicyTimeline(), so anything
+// that changes those metrics — a resize, OR the web fonts finishing loading —
+// must run this to recapture them. Otherwise the measurements keep fallback-font
+// values and cards drift off their nodes / era gaps are mis-sized.
+function reinitPolicyTimeline() {
+  const svgEl = document.getElementById('timeline-viz');
+  if (svgEl) svgEl.innerHTML = '';
+  resizeRiverCanvas();
+  clearTimelineOverlays();
+  if (tlScrollTrigger) { tlScrollTrigger.kill(); tlScrollTrigger = null; }
+  if (tlMasterTl) { tlMasterTl.kill(); tlMasterTl = null; }
+  tlInitialized = false;
+  initPolicyTimeline();
+  if (window.ScrollTrigger) ScrollTrigger.refresh();
+}
+
 // Initialize on load — reset scroll first so browser restoration doesn't start mid-timeline.
 window.addEventListener('DOMContentLoaded', () => {
   if (window.gsap && window.ScrollTrigger) gsap.registerPlugin(ScrollTrigger, MotionPathPlugin, SplitText);
   if ('scrollRestoration' in history) history.scrollRestoration = 'manual';
   window.scrollTo(0, 0);
   initPolicyTimeline();
+
+  // The first init runs at DOMContentLoaded, before Crimson Text / Lora have
+  // loaded — so the measurements above use fallback-font metrics. Recapture them
+  // once the real fonts swap in. Guarded so a font set that's already cached
+  // (ready resolves immediately) doesn't reinit needlessly on top of a good init.
+  if (document.fonts && document.fonts.ready) {
+    const swapReinit = () => { if (tlInitialized) reinitPolicyTimeline(); };
+    if (document.fonts.status === 'loaded') { /* already correct — no reinit */ }
+    else document.fonts.ready.then(swapReinit);
+  }
 });
 
 // Reinitialize on resize so mobile/desktop layout constants stay correct.
 let tlResizeTimer = null;
 window.addEventListener('resize', () => {
   clearTimeout(tlResizeTimer);
-  tlResizeTimer = setTimeout(() => {
-    const svgEl = document.getElementById('timeline-viz');
-    if (svgEl) svgEl.innerHTML = '';
-    resizeRiverCanvas();
-    clearTimelineOverlays();
-    if (tlScrollTrigger) { tlScrollTrigger.kill(); tlScrollTrigger = null; }
-    if (tlMasterTl) { tlMasterTl.kill(); tlMasterTl = null; }
-    tlInitialized = false;
-    initPolicyTimeline();
-    if (window.ScrollTrigger) ScrollTrigger.refresh();
-  }, 250);
+  tlResizeTimer = setTimeout(reinitPolicyTimeline, 250);
 });
 
 // bird.mp4's background isn't real alpha, and drawing it to a <canvas> for
@@ -2834,13 +2998,36 @@ window.addEventListener('resize', () => {
 // canvas, no video, no taint risk.
 const HERO_BIRD_FRAME_COUNT = 80;
 window.addEventListener('DOMContentLoaded', () => {
-  document.querySelectorAll('.hero-bird-frame').forEach((img, wrapIndex) => {
-    let frame = wrapIndex * 11; // offset each bird so they don't flap in sync
-    setInterval(() => {
-      frame = (frame + 1) % HERO_BIRD_FRAME_COUNT;
-      img.src = `images/bird-frames/f${String(frame + 1).padStart(3, '0')}.png`;
+  // Respect reduced-motion: the CSS above already hides the birds; skip the
+  // frame-swap interval too so we neither animate nor fetch 80 frames per bird.
+  if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const birds = document.querySelectorAll('.hero-bird-frame');
+  const heroSky = document.querySelector('.hero-sky');
+  if (!birds.length) return;
+
+  const frames = Array.from(birds, (_, i) => i * 11); // offset each bird so they don't flap in sync
+  let birdTimer = null;
+  const startBirds = () => {
+    if (birdTimer) return;
+    birdTimer = setInterval(() => {
+      birds.forEach((img, i) => {
+        frames[i] = (frames[i] + 1) % HERO_BIRD_FRAME_COUNT;
+        img.src = `images/bird-frames/f${String(frames[i] + 1).padStart(3, '0')}.png`;
+      });
     }, 1000 / 8);
-  });
+  };
+  const stopBirds = () => { if (birdTimer) { clearInterval(birdTimer); birdTimer = null; } };
+
+  // Only run the frame-swap while the hero is actually on screen — once it has
+  // scrolled away there's nothing to animate, so the timer (and its per-frame
+  // image swaps) is pure waste. Fall back to always-on if there's no sky/observer.
+  if (heroSky && 'IntersectionObserver' in window) {
+    new IntersectionObserver(entries => {
+      if (entries[0].isIntersecting) startBirds(); else stopBirds();
+    }).observe(heroSky);
+  } else {
+    startBirds();
+  }
 });
 
 
