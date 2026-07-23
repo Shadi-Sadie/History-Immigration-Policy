@@ -41,13 +41,13 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 
 .tl-intro-section {
   position: relative;
-  min-height: 160vh;
+  min-height: 118vh;
   text-align: center;
-  z-index: 50;
-  /* Flat, not a gradient: .tl-timeline-container runs its own paper→paper-mid
-     gradient starting fresh at 0%, so a gradient here would end darker than
-     that section begins, creating a visible seam at the handoff. */
-  background: var(--paper);
+  z-index: 2;
+  /* Transparent so the single fixed river canvas (in .tl-viz-wrapper, z-index 1)
+     shows through the hero. The hero's own text (z-index 3), map/clouds
+     (z-index 1–2 inside this stacking context) still layer above the river. */
+  background: transparent;
   color: var(--ink);
   font-family: 'Crimson Text', serif;
   overflow: visible;
@@ -210,16 +210,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 
 #hero-river-svg { display: block; width: 100%; height: 100%; }
 
-@keyframes heroShipRock {
-  0%, 100% { transform: rotate(-4deg) translateY(0); }
-  50%      { transform: rotate(4deg) translateY(-4px); }
-}
-
-.hero-ship-idle {
-  transform-box: fill-box;
-  transform-origin: 50% 50%;
-  animation: heroShipRock 5s ease-in-out infinite;
-}
+/* The hero river and ship are no longer drawn here — the single fixed
+   #river-canvas + the SVG .tl-ship (both in .tl-viz-wrapper) provide one
+   continuous river and boat through the hero and the timeline. Only the
+   decorative US map remains in #hero-river-svg. */
 
 .tl-timeline-container {
   position: relative;
@@ -237,12 +231,11 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   display: flex;
   align-items: center;
   justify-content: center;
-  opacity: 0;
+  opacity: 1;              /* visible from load — the single river shows through the hero */
   pointer-events: none;
 }
 
 .policy-history-section.is-active .tl-viz-wrapper {
-  opacity: 1;
   pointer-events: auto;
 }
 
@@ -649,6 +642,15 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   border-bottom: 1px solid var(--rule);
   background: var(--era-banner, var(--paper));
 }
+/* Era 1 is the very first thing the camera reaches after the hero scroll — a
+   hard-edged banner arriving right there reads as "hero video ends, timeline
+   video starts." Drop its top border and fade its top edge into the paper
+   background instead, so it arrives as a continuation of the same shot. */
+.era-panel.era-colonial {
+  border-top: none;
+  mask-image: linear-gradient(to bottom, transparent 0%, black 12%);
+  -webkit-mask-image: linear-gradient(to bottom, transparent 0%, black 12%);
+}
 .era-panel-image {
   position: relative;
   flex: 1 1 36%;
@@ -864,12 +866,7 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
         <path id="hero-us-map" filter="url(#heroWaterTurb)" transform="translate(80,60)"
           d="M510.5,294.3L514.8,307.0L526.4,323.5L527.7,330.7L537.8,348.3L539.0,363.4L537.1,370.9L539.1,367.6L534.1,377.1L536.3,372.5L527.0,374.3L523.8,367.1L518.1,365.5L514.6,358.2L511.3,357.2L510.7,350.2L508.6,354.1L500.7,343.0L504.3,337.2L502.6,338.2L500.4,335.8L502.2,338.7L500.7,342.0L498.7,338.5L498.6,323.0L484.6,310.3L476.1,308.2L475.6,311.2L466.0,315.1L467.5,316.3L471.4,313.8L467.1,316.9L450.0,307.2L428.6,311.3L431.6,310.0L427.9,304.5L426.7,310.0L411.7,310.3L405.2,316.3L407.8,318.2L409.9,314.9L411.5,317.2L413.4,316.2L410.9,321.1L407.8,321.7L417.0,327.7L411.9,331.8L413.4,327.9L406.0,326.4L401.3,330.1L398.4,326.4L396.6,327.1L393.0,331.1L386.8,327.8L389.6,328.3L382.8,321.5L379.8,322.0L380.1,320.2L375.4,321.6L377.8,323.5L374.9,324.7L359.1,321.9L343.0,328.1L346.1,325.8L342.5,325.5L342.6,322.0L340.3,323.3L341.0,329.0L337.5,331.9L343.0,328.7L317.3,346.0L310.7,354.3L308.4,362.1L311.2,376.5L308.4,369.5L308.7,357.8L312.5,349.6L321.2,342.4L316.6,342.3L314.5,346.5L311.6,346.4L313.3,347.7L311.1,350.8L306.8,350.4L310.2,352.8L308.0,358.3L305.0,359.0L307.9,359.1L307.5,368.7L311.2,376.8L308.2,380.0L285.6,371.3L281.0,362.0L280.5,354.0L270.6,343.0L266.3,330.7L257.3,320.5L245.4,318.2L241.2,319.7L234.7,330.4L230.7,329.3L217.5,319.3L213.6,304.6L196.2,285.6L174.4,282.7L173.5,289.3L137.8,284.1L94.9,258.9L96.7,255.8L67.1,252.3L65.1,239.7L59.5,232.3L55.7,231.2L55.2,226.6L48.5,224.0L44.6,218.2L32.6,212.9L34.7,204.7L25.0,184.0L27.7,174.8L22.7,169.3L23.9,160.6L27.8,166.7L25.6,158.2L27.6,156.6L25.5,155.9L23.9,160.0L19.3,155.8L20.8,152.4L15.3,139.8L17.9,126.9L14.5,116.4L22.6,103.3L23.6,81.8L32.4,67.9L43.9,35.4L48.4,36.4L43.3,34.7L44.9,29.6L45.0,33.5L47.6,29.1L45.4,25.6L48.3,25.8L46.2,23.7L45.1,25.1L46.1,3.3L52.3,8.3L60.5,10.6L62.2,13.8L63.9,12.1L64.3,16.1L56.9,22.1L59.4,22.3L57.4,21.7L65.2,16.1L62.4,24.8L60.9,23.6L60.2,26.5L59.3,24.1L60.5,27.0L64.9,24.5L65.1,19.8L68.3,16.0L65.6,7.7L68.9,6.6L67.4,0.0L139.3,17.8L214.6,30.0L317.5,36.7L335.0,36.8L334.9,31.1L336.9,31.3L340.1,40.5L348.5,43.6L356.4,41.8L360.0,42.9L362.8,47.5L365.8,45.3L370.8,49.7L377.5,46.4L378.8,48.5L391.5,49.0L378.2,56.5L366.4,68.4L368.0,69.9L378.6,65.3L378.1,70.7L380.2,69.1L383.6,70.8L407.2,55.7L410.0,56.6L405.0,60.0L402.9,66.7L406.2,63.3L404.9,65.4L409.6,64.1L414.8,69.4L420.3,69.8L436.5,63.3L438.7,63.0L438.5,67.3L447.5,65.5L446.9,70.8L451.1,73.0L453.8,71.2L454.9,73.4L443.0,73.1L442.4,76.4L434.1,73.5L426.6,76.6L423.6,81.9L424.0,77.6L419.9,81.2L419.1,78.8L410.6,96.2L411.0,99.0L420.3,86.9L413.2,118.1L415.2,131.9L421.7,141.4L428.0,137.9L431.8,129.5L432.0,122.0L426.9,104.7L430.6,91.4L435.3,86.5L436.2,93.3L437.0,85.4L441.4,83.1L439.0,80.7L439.8,77.8L448.2,78.7L457.5,82.9L459.8,96.5L454.4,106.0L457.6,108.0L459.9,102.8L464.7,99.9L468.0,102.7L472.3,115.4L471.9,120.8L470.4,122.4L470.7,120.1L468.9,120.5L463.7,135.1L475.0,138.8L482.8,136.1L508.1,115.8L510.6,111.9L507.0,105.3L514.1,102.3L529.3,100.9L536.0,95.6L534.4,91.2L536.0,90.0L533.0,88.6L533.1,86.0L544.5,71.7L579.5,62.6L580.6,57.9L585.2,57.8L588.6,46.8L588.0,34.6L592.4,21.7L596.7,24.7L602.4,20.3L607.9,23.1L613.8,42.7L617.6,42.7L618.6,47.4L622.4,48.0L625.7,52.4L621.3,59.4L619.0,58.6L615.6,62.1L616.1,64.2L612.4,62.4L612.9,68.7L609.1,62.5L607.1,64.0L608.2,70.7L598.3,78.1L595.7,84.3L594.7,91.5L597.9,93.9L595.1,100.5L598.3,100.7L603.4,106.5L607.3,104.7L604.0,101.3L606.3,101.5L608.7,108.1L608.1,106.4L604.5,107.9L599.1,112.9L601.6,110.1L600.2,107.5L596.3,112.8L595.1,110.7L594.8,113.4L595.4,109.7L592.9,108.7L593.5,114.9L578.6,119.9L572.1,125.8L571.0,129.4L585.8,120.2L588.3,122.1L590.7,120.3L577.7,130.3L570.1,133.5L568.5,131.6L566.8,134.9L570.0,135.0L571.1,145.2L565.4,159.1L564.4,156.0L556.3,153.2L555.6,149.8L555.7,153.3L563.2,161.7L565.0,167.3L559.2,188.8L557.6,185.6L559.6,175.6L557.1,176.6L556.1,170.1L554.3,172.5L551.8,171.5L550.7,167.4L553.6,167.4L549.7,166.4L550.5,162.6L548.8,164.1L551.2,152.8L547.0,159.2L545.3,158.5L551.9,175.9L542.9,171.5L540.4,173.0L541.1,169.0L539.7,173.1L542.7,172.2L544.2,174.8L553.4,177.8L552.8,182.2L545.5,178.2L553.6,182.8L554.7,186.4L552.8,185.4L552.4,187.8L555.3,190.9L547.2,189.1L550.3,189.0L553.6,192.9L559.1,191.4L568.0,206.8L560.3,197.1L564.0,203.3L558.9,200.9L560.7,202.7L556.1,203.3L558.1,204.1L555.2,206.1L553.0,202.5L554.3,207.4L561.2,205.1L562.4,209.8L564.3,204.9L566.2,209.6L562.3,215.0L558.2,215.2L558.0,212.5L557.0,215.2L551.5,214.4L558.7,216.8L555.7,221.9L553.5,221.7L561.6,220.0L559.8,225.4L558.0,225.3L559.9,225.8L564.4,218.6L560.0,226.7L553.9,226.9L548.4,231.7L545.2,240.9L540.0,241.1L535.3,244.4L530.6,256.4L518.4,266.2L518.9,268.6L515.3,269.5L516.6,270.7L511.2,279.0L510.5,294.3Z"
           fill="var(--river)" fill-opacity="0.35"></path>
-        <path id="hero-river-path"
-          d="M420 190 C 405 240, 430 300, 405 350 C 395 385, 400 400, 400 420 C 410 470, 385 510, 400 560 C 420 640, 385 720, 400 900 C 410 1010, 392 1130, 400 1260"
-          stroke="var(--river)" stroke-width="26" fill="none" stroke-linecap="round" stroke-opacity="0.9"></path>
         </g>
-        <image id="hero-ship" class="hero-ship-idle"
-          href="images/boat.png" x="375" y="395" width="50" height="50" preserveAspectRatio="xMidYMid meet"></image>
       </svg>
     </div>
     <div class="tl-intro-inner">
@@ -1972,13 +1969,35 @@ policies.forEach((policy, globalIndex) => {
 
 const pathBottomY = points[points.length - 1].y;
 
+  // ── HERO UPSTREAM TAIL — real geometry, prepended to the motion/visual path.
+  // The river extends upstream ABOVE points[0] (the seam) so the hero and the
+  // timeline share ONE path, ONE river polyline and ONE camera. The tail arrives
+  // at the seam dead-vertical, so the cardinal spline through
+  // [...heroPoints, ...points] has C0/C1 continuity there (points[0]→points[1]
+  // is already vertical at pathDataCenterX — both are era-0 gap waypoints).
+  // Names are heroSeamPt / HERO_TAIL_UP / HERO_TAIL_STEPS to avoid colliding with
+  // the legacy bridge block's heroSeam / HERO_TAIL_SPAN further below.
+  const heroSeamPt = points[0];               // == (pathDataCenterX, H*0.15)
+  const HERO_TAIL_UP = 640;                   // viewBox units authored ABOVE the seam
+  const HERO_TAIL_STEPS = 40;
+  const heroPoints = [];
+  for (let i = 0; i < HERO_TAIL_STEPS; i++) {   // < not <=: do NOT duplicate the seam
+    const tt = i / HERO_TAIL_STEPS;             // 0 = top of tail, →1 approaches seam
+    const y = heroSeamPt.y - HERO_TAIL_UP * (1 - tt);
+    const decay = (1 - tt) * (1 - tt);
+    const meander = Math.sin((1 - tt) * Math.PI * 1.6) * 52 * decay;
+    heroPoints.push({ x: heroSeamPt.x + meander, y, isHero: true });
+  }
+  const timelineStartIndex = heroPoints.length;   // index of the seam within unifiedPoints
+  const unifiedPoints = [...heroPoints, ...points];
+
   // curveCardinal (not curveMonotoneY): passes through every node exactly, same
   // as before, but lets the river swing past each point with real overshoot
   // instead of the clamped, chart-legible bend monotoneY enforces. Tension
   // ~0.3–0.5 = loose, natural meander; 1.0 would collapse back to straight
   // segments between points.
   const line = d3.line().x(d => d.x).y(d => d.y).curve(d3.curveCardinal.tension(0.35));
-  const pathData = line(points);
+  const pathData = line(unifiedPoints);   // unified: hero tail + timeline
 
   // ── CAMERA GROUP — all path/node content moves together ───────────────
   const cameraGroup = svg.append('g').attr('class', 'tl-camera');
@@ -2090,7 +2109,13 @@ const pathBottomY = points[points.length - 1].y;
   ship.node().setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', SHIP_SRC);
 
   const totalLen = animPath.node().getTotalLength();
-  const nodeAtLength = getNodePathLengths(animPath.node(), points, totalLen);
+  // Measure per UNIFIED vertex, then slice back to timeline-relative indices so
+  // all downstream node math keeps using the ORIGINAL points index (0 = seam).
+  const unifiedAtLength = getNodePathLengths(animPath.node(), unifiedPoints, totalLen);
+  const timelineStartDistance = unifiedAtLength[timelineStartIndex];   // seam arc length
+  const heroRiverDistance = timelineStartDistance;                     // hero portion length
+  const timelineRiverDistance = totalLen - timelineStartDistance;      // timeline portion length
+  const nodeAtLength = points.map((_, i) => unifiedAtLength[timelineStartIndex + i]);
 
   // ── RIVER SAMPLES ─────────────────────────────────────────────────────
   // Pre-sample the path once (raw SVG-viewBox coords). Each frame these are
@@ -2241,6 +2266,7 @@ const pathBottomY = points[points.length - 1].y;
   const rawPath = MotionPathPlugin.getRawPath(animPath.node());
   MotionPathPlugin.cacheRawPathMeasurements(rawPath);
   const nodeFrac = nodeAtLength.map(l => l / totalLen);   // arc-length fraction per node
+  const f_seam = nodeFrac[0];   // = timelineStartDistance/totalLen — where the timeline begins
 
   // ── TIME BUDGET ───────────────────────────────────────────────────────
   const segLen = [];
@@ -2253,6 +2279,12 @@ const pathBottomY = points[points.length - 1].y;
   // The ship traveler proxy (`frac` = arc-length position along the path); the
   // follow camera is derived from it, so this is the only animated state.
   const nav = { frac: 0 };
+
+  // Hero DOM elements faded by applyFrame (driven by the same nav.frac, so no
+  // second animated driver). Cached once here.
+  const tlHeroInner  = document.querySelector('.tl-intro-inner');
+  const tlHeroCue    = document.querySelector('.tl-scroll-cue');
+  const tlHeroMapGrp = document.getElementById('hero-map-river-group');
 
   // ── CLOSING-RECAP STATE ───────────────────────────────────────────────
   let T_FOLLOW_END = Infinity, outroDur = 1;
@@ -2273,7 +2305,7 @@ const pathBottomY = points[points.length - 1].y;
       : Math.min(1, Math.max(0, (t - T_FOLLOW_END) / outroDur));
 
     // ── SHIP POSITION (MotionPathPlugin) — also feeds the follow camera ──
-    let shipX = points[0].x, shipY = points[0].y, shipAngle = 0;
+    let shipX = unifiedPoints[0].x, shipY = unifiedPoints[0].y, shipAngle = 0;
     if (followPhase) {
       const pos = MotionPathPlugin.getPositionOnPath(rawPath, Math.min(1, Math.max(0, nav.frac)), true);
       shipX = pos.x; shipY = pos.y; shipAngle = pos.angle;
@@ -2287,6 +2319,16 @@ const pathBottomY = points[points.length - 1].y;
         shipAngle += (90 - shipAngle) * straightenAmt;
       }
     }
+
+    // ── HERO ⇄ TIMELINE GATE ──────────────────────────────────────────────
+    // Timeline semantics (node cosmetics, era bg, card reveals) engage only from
+    // the seam onward. Before it we are in the hero: pure river+ship+camera on
+    // the extended path. The hero DOM fades are driven off the SAME nav.frac.
+    const inTimeline = nav.frac >= f_seam - 1e-4;
+    const heroP = f_seam > 0 ? Math.min(1, Math.max(0, nav.frac / f_seam)) : 1;
+    if (tlHeroInner)  tlHeroInner.style.opacity  = String(1 - Math.min(1, heroP / 0.5));
+    if (tlHeroCue)    tlHeroCue.style.opacity    = String(1 - Math.min(1, heroP / 0.5));
+    if (tlHeroMapGrp) tlHeroMapGrp.style.opacity = String(0.16 + 0.84 * Math.min(1, heroP / 0.65));
 
     // ── CAMERA ── vertical-only follow of the ship; no overview/zoom phase ──
     const camTx = 0, camScale = 1, camTy = H / 2 - shipY;
@@ -2327,7 +2369,7 @@ const pathBottomY = points[points.length - 1].y;
 
     // ── NODE STATE ──
     let passedIndex = -1, activeIndex = -1;
-    if (followPhase) {
+    if (followPhase && inTimeline) {
       for (let i = 0; i < policyPoints.length; i++) {
         if (shipY >= policyPoints[i].y - 0.5) passedIndex = policyPoints[i].index; else break;
       }
@@ -2663,6 +2705,26 @@ const pathBottomY = points[points.length - 1].y;
   // ── THE MASTER GSAP TIMELINE ─────────────────────────────────────────
   if (tlMasterTl) { tlMasterTl.kill(); tlMasterTl = null; }
   tlMasterTl = gsap.timeline({ paused: true, onUpdate: applyFrame });
+
+  // The node-follow segments (unchanged shape) sum to nodesDur; the outro/hold
+  // are sized off that, exactly as before.
+  const nodesDur = segLen.reduce((a, b) => a + b, 0);
+  outroDur = Math.max(1, nodesDur * 0.12);
+  const holdDur = Math.max(1, nodesDur * 0.18);
+
+  // Hero lead-in: nav.frac 0 (top of hero tail) → f_seam (old timeline start).
+  // Its duration is set so the hero occupies the SAME share of the master
+  // timeline as the hero section occupies of the total scrollable height — so
+  // the seam is reached exactly when the hero scrolls away (no dead-air gap,
+  // no arc-length mismatch). Read the real heights so it self-corrects if the
+  // CSS min-heights change.
+  const introH = document.querySelector('.tl-intro-section').offsetHeight;
+  const containerH = containerEl.offsetHeight;
+  const HERO_SCROLL_FRAC = introH / (introH + containerH);
+  const restDur = nodesDur + outroDur + holdDur;
+  const heroLeadDur = restDur * HERO_SCROLL_FRAC / (1 - HERO_SCROLL_FRAC);
+  tlMasterTl.to(nav, { frac: f_seam, duration: heroLeadDur, ease: 'none' });
+
   for (let i = 0; i < points.length - 1; i++) {
     const touchesGap = points[i].isGap || points[i + 1].isGap;
     tlMasterTl.to(nav, {
@@ -2672,8 +2734,7 @@ const pathBottomY = points[points.length - 1].y;
     });
   }
 
-  T_FOLLOW_END = tlMasterTl.duration();
-  outroDur = Math.max(1, T_FOLLOW_END * 0.12);
+  T_FOLLOW_END = tlMasterTl.duration();   // = heroLeadDur + nodesDur (ship at last node)
   tlMasterTl.to({ _outro: 0 }, { _outro: 1, duration: outroDur, ease: 'none' });
 
   // Dwell: hold on the finished sea+text frame for a stretch of scroll before
@@ -2681,13 +2742,12 @@ const pathBottomY = points[points.length - 1].y;
   // outroT===1 (scrub maps scroll 1:1 onto timeline time), so is-active flips
   // off — and the fixed viz layer disappears — the instant the ending frame
   // is complete, flashing straight to the plain page background beneath it.
-  const holdDur = Math.max(1, T_FOLLOW_END * 0.18);
   tlMasterTl.to({}, { duration: holdDur });
 
   // ── THE SINGLE SCROLL SYSTEM ─────────────────────────────────────────
   if (tlScrollTrigger) { tlScrollTrigger.kill(); tlScrollTrigger = null; }
   tlScrollTrigger = ScrollTrigger.create({
-    trigger: containerEl,
+    trigger: tlSectionEl,        // #policy-history — spans hero + timeline container
     start: 'top top',
     end: 'bottom bottom',
     scrub: 1.2,
@@ -2783,57 +2843,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
 });
 
-// ── Hero intro: US map / river / ship, independent of the pinned timeline's
-// nav.frac engine (its own element, its own path, its own ScrollTrigger). ──
-window.addEventListener('DOMContentLoaded', () => {
-  if (!window.gsap || !window.ScrollTrigger || !window.MotionPathPlugin) return;
-  gsap.registerPlugin(ScrollTrigger, MotionPathPlugin);
-
-  const heroShip = document.getElementById('hero-ship');
-  if (heroShip) heroShip.setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', 'images/boat.png');
-
-  // Rise to full saturation and hold; the river stays visible almost to the end
-  // of the hero scroll (it extends past the section to meet the pinned river),
-  // then crossfades out over the handoff overlap (see the late fade below).
-  const heroTl = gsap.timeline({ paused: true, defaults: { ease: 'none' } });
-  heroTl.fromTo('.tl-intro-inner, .tl-scroll-cue', { opacity: 1 }, { opacity: 0, duration: 0.5 }, 0);
-  // Animate one shared opacity on the wrapping <g>, not each shape separately —
-  // two independently-faded semi-transparent shapes of the same color stack their
-  // alpha where they overlap (river crossing the map reads as a darker seam).
-  // A single group opacity composites the map+river at their fixed relative
-  // fill-opacity/stroke-opacity first, then fades that flat result as one unit.
-  heroTl.fromTo('#hero-map-river-group', { opacity: 0.16 }, { opacity: 1, duration: 0.65 }, 0);
-  heroTl.to(heroShip, {
-    motionPath: {
-      path: '#hero-river-path',
-      align: '#hero-river-path',
-      alignOrigin: [0.5, 0.5],
-      autoRotate: SHIP_ANGLE_OFFSET,
-    },
-    duration: 1,
-  }, 0);
-  // Late, quick fade (only the last 10% of the hero scroll): the hero river now
-  // extends below the section (see .hero-river-wrap / #hero-river-svg) so it
-  // physically reaches the pinned timeline's own river at the handoff. Keep it
-  // visible long enough to bridge that gap, then crossfade it out over the
-  // overlap zone — so it's gone before the era-1 cover panel scrolls up (the
-  // hero group paints above pinned content at z-index 50), instead of either
-  // fading early and leaving a blank gap, or lingering as a blue stub over the
-  // era panel.
-  heroTl.to('#hero-map-river-group', { opacity: 0, duration: 0.1 }, 0.9);
-  heroTl.to(heroShip, { opacity: 0, duration: 0.1 }, 0.9);
-
-  ScrollTrigger.create({
-    trigger: '.tl-intro-section',
-    start: 'top top',
-    end: 'bottom top',
-    scrub: true,
-    animation: heroTl,
-    onUpdate: self => {
-      heroShip.classList.toggle('hero-ship-idle', self.progress <= 0.001);
-    },
-  });
-});
 
 </script>
 </body>
