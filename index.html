@@ -2599,20 +2599,26 @@ const pathBottomY = points[points.length - 1].y;
       const lakeCenterScreen = screenCTM.d * (camTy + lakeCenterWorldY) + screenCTM.f;
       const delta = lakeCenterScreen - window.innerHeight / 2;
       tlHeroInner.style.transform = `translateY(calc(-50% + ${delta}px))`;
-      // Cap the block's width to the coastline it ACTUALLY spans (read from last
-      // frame's box — one frame of lag, imperceptible during scroll) rather than
-      // the shape's overall bounding width, so it wraps to stay inside the
-      // coastline instead of overhanging a local narrow point like the Great
-      // Lakes notch or the Gulf/Maine tapers.
-      const rect = tlHeroInner.getBoundingClientRect();
-      const screenToRawY = (sy) => ((sy - screenCTM.f) / screenCTM.d - camTy - lakeBY) / LAKE_S;
+      // Cap the block's width to the coastline over a FIXED band around the
+      // lake's centre, rather than the shape's overall bounding width, so it
+      // wraps to stay inside the coastline instead of overhanging a local
+      // narrow point like the Great Lakes notch or the Gulf/Maine tapers.
+      // Deliberately NOT measured from the block's own current rendered rect:
+      // that reads back this frame's height to size next frame's width, and a
+      // width just narrow enough to force one more line makes the box taller,
+      // which then reads back an even narrower width — a feedback loop that
+      // collapsed to a sliver on a real device where font metrics wrapped the
+      // title one line taller than in testing, pushing "Who" above the lake's
+      // northern tip into the sky (invisible there: cream text on cream sky).
+      // TITLE_BAND_RAW is sized for ~2-3 lines either side of centre.
+      const TITLE_BAND_RAW = 50;
       const safeRawWidth = Math.min(
-        lakeWidthAtRawY(screenToRawY(rect.top)),
-        lakeWidthAtRawY(screenToRawY((rect.top + rect.bottom) / 2)),
-        lakeWidthAtRawY(screenToRawY(rect.bottom))
+        lakeWidthAtRawY(LAKE_CENTER_RAWY - TITLE_BAND_RAW),
+        lakeWidthAtRawY(LAKE_CENTER_RAWY),
+        lakeWidthAtRawY(LAKE_CENTER_RAWY + TITLE_BAND_RAW)
       );
       const maxWidthPx = safeRawWidth * LAKE_S * camScale * screenCTM.a * 0.86;
-      tlHeroInner.style.maxWidth = Math.max(200, maxWidthPx) + 'px';
+      tlHeroInner.style.maxWidth = Math.max(240, maxWidthPx) + 'px';
     }
 
     // ── LANE LABELS ──
