@@ -579,7 +579,11 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
     padding: 0 1rem;
   }
   .tl-intro-hint { margin-top: 2rem; }
-  .tl-timeline-container { min-height: 1100vh; }
+  /* Scroll budget must track the path length. The phone path is now sized from
+     a target on-screen node gap (NODE_SPACING_PX), so it is much longer in
+     screen pixels than it used to be; at 1100vh the camera panned 2.5 screen-px
+     per scroll-px, vs desktop's 1.66. 1700vh restores desktop's pacing. */
+  .tl-timeline-container { min-height: 2300vh; }
   .margin-card,.landmark-card,.policy-figure,.policy-figure-landmark { max-width: 90vw; }
   .policy-item.left  { left: 2%; }
   /* .right position set by JS on tablet — keep right fallback only on small screens */
@@ -590,19 +594,31 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
      win on source order. Don't move them back up here. */
 }
 
-@media(max-width:640px) {
+/* 768, not 640: the JS switches to centred, head-to-toe card placement at
+   `isMobileTimeline` = max-width 768px, so the height caps that keep those
+   cards from colliding have to start at the same breakpoint. At 640 the
+   641-768px band (tablets) got centred cards with no cap — measured 708px
+   items against a 480px slot. */
+@media(max-width:768px) {
   /* Phone card placement is handled in JS (centred horizontally, dropped just
      below the node) so it pans with the river trail. The old bottom-dock rule
      that used to live here couldn't work — a `bottom`-anchored card still pans
      away with the card layer's per-frame translateY — so it's gone. These rules
      just cap the card/photo size so a tall card stays inside the viewport. */
+  /* Phone cards are centred under their node and stack head-to-toe, so an
+     item's total height has to fit inside NODE_SPACING_PX (480px). Photo +
+     card + caption is capped here to ~470px; keep these in sync with
+     NODE_SPACING_PX or neighbouring cards start overlapping again. */
   .margin-card, .landmark-card {
-    max-height: 52vh;
+    /* Hard px ceiling as well as the vh one: NODE_SPACING_PX is a fixed 480px,
+       so on a tall phone/tablet a purely vh-based cap grows past its slot and
+       the cards collide again (measured 708px items at 768x1024). */
+    max-height: min(31vh, 262px);
     overflow: auto;
     padding: 1.1rem 1rem 1rem;
   }
   .policy-figure, .policy-figure-landmark { max-width: 90vw; margin-bottom: 0.5rem; }
-  .policy-photo { max-height: 22vh; }
+  .policy-photo { max-height: min(16vh, 135px); }
   .policy-caption { font-size: 0.55rem; margin-top: 0.35rem; }
 }
 
@@ -1867,32 +1883,81 @@ function initPolicyTimeline() {
   const W = 1200, H = 800;
   const CONNECTOR_LEN = 120; // SVG units — connector length from node to card edge
   const isMobileTimeline = window.matchMedia('(max-width: 768px)').matches;
+
+  // ── SCALE-INDEPENDENT SIZING ───────────────────────────────────────────
+  // The SVG is viewBox="0 0 1200 800" with the default preserveAspectRatio
+  // ("xMidYMid meet"), so one viewBox unit is NOT one screen pixel: the
+  // uniform scale is min(clientW/1200, clientH/800). On a 390px phone that is
+  // 0.325; on a 1440x900 desktop it is 1.125 — a 3.5x difference. Any constant
+  // written in raw viewBox units therefore renders 3.5x smaller on a phone
+  // than on a desktop, which is what used to bunch every policy node into the
+  // same ~300px of screen.
+  //
+  // So: author these in SCREEN PIXELS and convert. `px()` is the same
+  // screen-px -> viewBox-unit conversion eraGapSVG already does with
+  // `/ ctmScale` below; the two now share one definition.
+  const ctmEarly = svgEl.getScreenCTM();
+  const ctmScale = (ctmEarly && ctmEarly.d) ? ctmEarly.d : 1;
+  const px = v => v / ctmScale;               // screen px → viewBox units
+
   const pathDataCenterX = W * 0.5;                            // path centered on full screen
-  const tlXSpread = W * (isMobileTimeline ? 0.10 : 0.13);    // lane spread
+  // Lane spread, also in screen px: at 0.325 the old 120-unit phone spread was
+  // 39 real pixels, so the three lane labels sat on top of each other. 175 is
+  // the desktop value today (156 units x 1.125).
+  const tlXSpread = px(isMobileTimeline ? 120 : 175);        // lane spread
   const viewCenterX = pathDataCenterX;                        // overview only; follow phase ignores X
-  const tlYSpan = H * (isMobileTimeline ? 4.5 : 14.0); // vertical span of path in SVG units
-  const bgPathWidth = isMobileTimeline ? 14 : 18;
-  const animPathWidth = isMobileTimeline ? 12 : 16;
-  const nodeRadius = isMobileTimeline ? 10 : 12;
-  const nodeStrokeWidth = isMobileTimeline ? 2 : 2.5;
-  const yearOffset = isMobileTimeline ? 22 : 28;
-  const baseYearSize = isMobileTimeline ? 12 : 14;
-  const activeYearSize = isMobileTimeline ? 18 : 28;
-  const baseYearStrokeWidth = isMobileTimeline ? 2.5 : 3;
-  const activeYearStrokeWidth = isMobileTimeline ? 3 : 4;
-  const SHIP_SIZE = isMobileTimeline ? 110 : 85;  // ship image edge in SVG units
-  
+
+  // Vertical span of the path. Derived from a target on-screen gap between
+  // consecutive policy nodes rather than a multiple of H, so the spacing a
+  // reader actually sees is the same on every viewport. 330px is desktop's
+  // measured median node gap today, so desktop is left where it was.
+  // Phone needs a wider slot than desktop, not a narrower one: desktop cards
+  // alternate left/right of the river so neighbours can overlap vertically
+  // without colliding, while phone cards are centred under their node and
+  // stack head-to-toe. 480 clears the tallest phone card (photo + card box,
+  // capped to ~470px by the <=768px media block) with margin.
+  const NODE_SPACING_PX = isMobileTimeline ? 480 : 330;
+  const tlYSpan = px(policies.length * NODE_SPACING_PX);
+
+  // Screen-pixel targets. The desktop numbers are the old viewBox constants
+  // multiplied by 1.125 (the ctm scale at 1440x900), so a standard desktop
+  // renders identically; the phone numbers are chosen to stay legible at
+  // 0.325 instead of collapsing (the old 14u river was 4.6px wide, the old
+  // 14u year label 3.9px tall).
+  const bgPathWidth = px(isMobileTimeline ? 13 : 20.25);
+  const animPathWidth = px(isMobileTimeline ? 11 : 18);
+  const nodeRadius = px(isMobileTimeline ? 11 : 13.5);
+  const nodeStrokeWidth = px(isMobileTimeline ? 2.5 : 2.8);
+  const yearOffset = px(isMobileTimeline ? 26 : 31.5);
+  const baseYearSize = px(isMobileTimeline ? 13 : 15.75);
+  const activeYearSize = px(isMobileTimeline ? 22 : 31.5);
+  const baseYearStrokeWidth = px(isMobileTimeline ? 2.5 : 3.4);
+  const activeYearStrokeWidth = px(isMobileTimeline ? 3 : 4.5);
+  const SHIP_SIZE = px(isMobileTimeline ? 64 : 95.6);  // ship image edge, screen px
 
   // Build path points: x snaps to three editorial lanes, y encodes time.
   // Vertical proportion allocated to each era comes from era.height — they
   // should sum to 1.0 across eras[].
 
-const eraStarts = [];
+// Vertical extent of each era, in viewBox units. `era.height` is an editorial
+// weighting, not a density budget: era 6 carries 11 policies in height 0.16
+// while era 1 carries 2 in height 0.10, so weighting alone gives era 6 less
+// than half the per-node room (measured 182px vs 410px on a phone — the dense
+// eras were still a pile-up even after the tlYSpan fix). On phones, floor each
+// era at the room its own node count needs. Desktop keeps the pure weighting:
+// with heights summing to 1.0, eraSpanVB/eraStartVB reduce exactly to the old
+// `tlYSpan * era.height` / `tlYSpan * eraStarts[i]`.
+const eraSpanVB = eras.map(era => {
+  const byWeight = tlYSpan * era.height;
+  if (!isMobileTimeline) return byWeight;
+  const count = era.endIndex - era.startIndex + 1;
+  return Math.max(byWeight, px((count + 1) * NODE_SPACING_PX));
+});
+const eraStartVB = [];
 let acc = 0;
-
 for (let i = 0; i < eras.length; i++) {
-  eraStarts.push(acc);
-  acc += eras[i].height;
+  eraStartVB.push(acc);
+  acc += eraSpanVB[i];
 }
 
 // Each era boundary (1..5) opens a tall vertical GAP in the river: an empty
@@ -1905,8 +1970,7 @@ const GAP_LEAD = 180;       // SVG units below the last node before the gap wayp
 // Per-era gap height, measured from the panel's actual content: eyebrow +
 // title + narrative all flow together in the single content column, exactly
 // as rendered, so the measurement box matches the real column width.
-const ctmEarly  = svgEl.getScreenCTM();
-const ctmScale  = (ctmEarly && ctmEarly.d) ? ctmEarly.d : 1;
+// ctmEarly / ctmScale are declared with the sizing constants above.
 const viewportPx = window.innerHeight;
 const contentBoxW = Math.min(720, window.innerWidth * (isMobileTimeline ? 0.9 : 0.64));
 // Phone: the content column is the full panel width (.era-panel-content /
@@ -1954,7 +2018,7 @@ policies.forEach((policy, globalIndex) => {
   const localIndex = globalIndex - era.startIndex;
   // Important: use count + 1 so era boundary nodes do NOT overlap
   const localT = (localIndex + 1) / (count + 1);
-  const baseY = H * 0.15 + tlYSpan * (eraStarts[eraIndex] + localT * era.height);
+  const baseY = H * 0.15 + eraStartVB[eraIndex] + localT * eraSpanVB[eraIndex];
 
   // Entering a new era → open its gap (two centered waypoints) first. The
   // leading gap (era 0) starts at the path top so the ship begins inside the
@@ -2096,11 +2160,13 @@ const pathBottomY = points[points.length - 1].y;
   const laneLabels = axis.selectAll('.tl-lane-label').data(laneLabelData).enter()
     .append('text')
       .attr('class', 'tl-lane-label')
-      .attr('x', d => d.x).attr('y', 34)
+      .attr('x', d => d.x).attr('y', px(38.25))
       .attr('text-anchor', 'middle')
       .attr('fill', 'rgba(192,161,58,0.7)')
       .style('font-family', "'Space Mono', monospace")
-      .style('font-size', '9px').style('letter-spacing', '1px')
+      // Screen px, not viewBox units: a literal '9px' here is 9 *user units*,
+      // which the viewBox scale renders at 2.9px on a phone.
+      .style('font-size', px(10.1) + 'px').style('letter-spacing', px(1.125) + 'px')
       .text(d => d.label);
 
   // Connector — updated per-frame so it tracks the active node as camera moves
