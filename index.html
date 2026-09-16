@@ -1724,14 +1724,23 @@ function lerpColor(hexA, hexB, t) {
   return `rgb(${r},${g},${bl})`;
 }
 
-function getPathDistanceToPoint(pathNode, len, point) {
-  const pt = pathNode.getPointAtLength(len);
+function getPathDistanceToPoint(pointAtFrac, totalLen, len, point) {
+  const pt = pointAtFrac(len / totalLen);
   const dx = pt.x - point.x;
   const dy = pt.y - point.y;
   return dx * dx + dy * dy;
 }
 
-function getNodePathLengths(pathNode, points, totalLen, samples) {
+// `pointAtFrac` resolves a point on the curve — callers pass GSAP's cached
+// MotionPathPlugin.getPositionOnPath, NOT the browser's native
+// getPointAtLength. Measured in real WebKit (Safari's engine — a CPU-throttled
+// Chrome is not a faithful stand-in here): on this path's complexity, native
+// getPointAtLength cost ~245us-4.7ms PER CALL; GSAP's cached equivalent cost
+// ~0.6us per call, a 400x+ difference on the same curve. That gap, not call
+// count, was the real reason startup stayed slow on an iPhone even after
+// deduplicating the two sampling passes (previous commit) — WebKit's native
+// path-length API is just far more expensive than pure-JS bezier math here.
+function getNodePathLengths(pointAtFrac, points, totalLen, samples) {
   // Coarse pass reuses `samples` — the same pre-walked array `initPolicyTimeline`
   // builds once for drawing the river — instead of re-walking the path with its
   // own dedicated getPointAtLength calls. That used to be a second, independent
@@ -1758,14 +1767,14 @@ function getNodePathLengths(pathNode, points, totalLen, samples) {
     if (index === points.length - 1) return totalLen;
 
     let bestLen = match.len;
-    let bestDist = getPathDistanceToPoint(pathNode, bestLen, points[index]);
+    let bestDist = getPathDistanceToPoint(pointAtFrac, totalLen, bestLen, points[index]);
     let delta = coarseStepLen;
 
     for (let i = 0; i < 24; i++) {
       const leftLen = Math.max(0, bestLen - delta);
       const rightLen = Math.min(totalLen, bestLen + delta);
-      const leftDist = getPathDistanceToPoint(pathNode, leftLen, points[index]);
-      const rightDist = getPathDistanceToPoint(pathNode, rightLen, points[index]);
+      const leftDist = getPathDistanceToPoint(pointAtFrac, totalLen, leftLen, points[index]);
+      const rightDist = getPathDistanceToPoint(pointAtFrac, totalLen, rightLen, points[index]);
 
       if (leftDist < bestDist && leftDist <= rightDist) {
         bestLen = leftLen;
@@ -2194,12 +2203,24 @@ const pathBottomY = points[points.length - 1].y;
 
   const totalLen = animPath.node().getTotalLength();
 
+  // ── MOTION-PATH SETUP (moved up from below) ────────────────────────────
+  // Cache the raw path + arc-length measurements ONCE, then get every point
+  // on the curve — for the node-length search and river samples right below,
+  // AND for the per-frame ship position later — from GSAP's own cached,
+  // pure-JS bezier math (getPositionOnPath) instead of the browser's native
+  // SVGGeometryElement.getPointAtLength. See getNodePathLengths above for
+  // why: native calls on this path's complexity measured 400x+ slower in
+  // real WebKit.
+  const rawPath = MotionPathPlugin.getRawPath(animPath.node());
+  MotionPathPlugin.cacheRawPathMeasurements(rawPath);
+  const pointAtFrac = frac => MotionPathPlugin.getPositionOnPath(rawPath, frac);
+
   // ── PATH SAMPLES ──────────────────────────────────────────────────────
   // Pre-sample the whole path ONCE, in raw SVG-viewBox coords, and reuse it for
   // both drawing the river and locating each node's arc-length below —
   // previously the two walked the same curve independently (a dedicated
   // ~8000-step scan for node lengths, plus this pass again for the river),
-  // roughly doubling the getPointAtLength calls an init needed to do.
+  // roughly doubling the number of path-geometry lookups an init needed.
   //
   // Resolution is a SCREEN-px target, not a fixed viewBox-unit step: totalLen
   // is expressed via px() (screen px / ctmScale — see the sizing constants
@@ -2212,14 +2233,14 @@ const pathBottomY = points[points.length - 1].y;
   const riverSampleCount = Math.max(160, Math.floor((totalLen * ctmScale) / RIVER_SAMPLE_STEP_PX));
   const riverSamples = new Array(riverSampleCount + 1);
   for (let i = 0; i <= riverSampleCount; i++) {
-    const len = (i / riverSampleCount) * totalLen;
-    const pt = animPath.node().getPointAtLength(len);
-    riverSamples[i] = { x: pt.x, y: pt.y, len };
+    const frac = i / riverSampleCount;
+    const pt = pointAtFrac(frac);
+    riverSamples[i] = { x: pt.x, y: pt.y, len: frac * totalLen };
   }
 
   // Measure per UNIFIED vertex, then slice back to timeline-relative indices so
   // all downstream node math keeps using the ORIGINAL points index (0 = seam).
-  const unifiedAtLength = getNodePathLengths(animPath.node(), unifiedPoints, totalLen, riverSamples);
+  const unifiedAtLength = getNodePathLengths(pointAtFrac, unifiedPoints, totalLen, riverSamples);
   const timelineStartDistance = unifiedAtLength[timelineStartIndex];   // seam arc length
   const heroRiverDistance = timelineStartDistance;                     // hero portion length
   const timelineRiverDistance = totalLen - timelineStartDistance;      // timeline portion length
@@ -2395,12 +2416,9 @@ const pathBottomY = points[points.length - 1].y;
 
   function easeInOut(t) { return t < 0.5 ? 2*t*t : -1 + (4 - 2*t)*t; }
 
-  // ── MOTION-PATH SETUP ─────────────────────────────────────────────────
-  // MotionPathPlugin caches the raw path + arc-length measurements once, so the
-  // ship's position/angle and the follow camera come from getPositionOnPath()
-  // instead of a manual getPointAtLength() on every frame.
-  const rawPath = MotionPathPlugin.getRawPath(animPath.node());
-  MotionPathPlugin.cacheRawPathMeasurements(rawPath);
+  // `rawPath` is already built (see "MOTION-PATH SETUP (moved up from below)"
+  // near totalLen above) — it's cached once and reused for the ship's
+  // position/angle and the follow camera via getPositionOnPath() every frame.
   const nodeFrac = nodeAtLength.map(l => l / totalLen);   // arc-length fraction per node
   const f_seam = nodeFrac[0];   // = timelineStartDistance/totalLen — where the timeline begins
 
