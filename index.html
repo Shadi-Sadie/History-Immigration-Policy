@@ -1975,7 +1975,13 @@ for (let i = 0; i < eras.length; i++) {
 // past. `cumGap` is the running downward shift applied to every node from the
 // era boundaries before it; two invisible waypoints carry the path through the
 // middle of each gap. `gapAnchors` records each gap's span for panel placement.
-const GAP_LEAD = 180;       // SVG units below the last node before the gap waypoints
+// SVG units below the last node before the gap waypoints. On mobile, cards
+// stack directly under their node (isMobileTimeline card placement) and need
+// the same NODE_SPACING_PX of screen room as any other node — a flat 180
+// converts to only ~60px on a phone, so the era gap opened right on top of
+// the last card before it had ever fully appeared. Desktop cards float
+// beside the river instead, so the flat value stays fine there.
+const GAP_LEAD = isMobileTimeline ? px(NODE_SPACING_PX) : 180;
 
 // Per-era gap height, measured from the panel's actual content: eyebrow +
 // title + narrative all flow together in the single content column, exactly
