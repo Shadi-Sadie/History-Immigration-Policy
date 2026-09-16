@@ -584,12 +584,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   .policy-item.left  { left: 2%; }
   /* .right position set by JS on tablet — keep right fallback only on small screens */
   .tl-viz-wrapper { width: 100%; height: 100vh; }
-  .era-cover-title { font-size: 1.5rem; }
-  .era-panel { flex-direction: column; }
-  .era-panel-image { max-width: 100%; flex: 0 0 30vh; }
-  .era-panel-content { max-width: 100%; }
-  .era-panel-content-inner { padding: 1.75rem 1.5rem 2.5rem; max-width: 100%; }
-  .era-cover-bg { opacity: 0.5; mask-image: linear-gradient(to bottom, black 55%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%); }
+  /* Era-panel phone rules are NOT here — they live in their own
+     @media(max-width:768px) block placed *after* the era base rules below,
+     because those base rules have identical specificity and would otherwise
+     win on source order. Don't move them back up here. */
 }
 
 @media(max-width:640px) {
@@ -770,6 +768,18 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   line-height: 1.3;
   color: #fdfbf6;
   margin: 1.4rem 0 0;
+}
+
+/* Phone era-panel layout. This block MUST stay after every .era-* base rule
+   above: same specificity, so source order decides. Verified with
+   getComputedStyle(.era-panel).flexDirection === 'column' at 390px. */
+@media(max-width:768px) {
+  .era-cover-title { font-size: 1.5rem; }
+  .era-panel { flex-direction: column; }
+  .era-panel-image { max-width: 100%; flex: 0 0 30vh; }
+  .era-panel-content { max-width: 100%; }
+  .era-panel-content-inner { padding: 1.75rem 1.5rem 2.5rem; max-width: 100%; }
+  .era-cover-bg { opacity: 0.5; mask-image: linear-gradient(to bottom, black 55%, transparent 100%); -webkit-mask-image: linear-gradient(to bottom, black 55%, transparent 100%); }
 }
 
 /* ── CLOSING TEXT OVERLAY ─────────────────────────────────────────────── */
@@ -1899,9 +1909,20 @@ const ctmEarly  = svgEl.getScreenCTM();
 const ctmScale  = (ctmEarly && ctmEarly.d) ? ctmEarly.d : 1;
 const viewportPx = window.innerHeight;
 const contentBoxW = Math.min(720, window.innerWidth * (isMobileTimeline ? 0.9 : 0.64));
-const textInnerW = isMobileTimeline ? (contentBoxW - 48) : (contentBoxW - 120); // minus L/R padding
+// Phone: the content column is the full panel width (.era-panel-content /
+// -inner are max-width:100% of a 100vw panel, capped by the inner's own
+// max-width:720px), minus the inner's 1.5rem L/R padding — NOT contentBoxW,
+// which is a desktop-column figure. Keep in sync with
+// `.era-panel-content-inner` padding in the phone @media block.
+const textInnerW = isMobileTimeline
+  ? (Math.min(window.innerWidth, 720) - 48)   // 2 × 1.5rem padding
+  : (contentBoxW - 120);                      // 4.5rem + 3rem padding
 const PAD_TOP_PX = isMobileTimeline ? 28 : 88;
 const PAD_BOTTOM_PX = isMobileTimeline ? 40 : 56;
+// Phone stacks the image as its own flex row (`.era-panel-image { flex: 0 0 30vh }`),
+// so the panel is that much taller than the text column alone. Desktop puts the
+// image beside the text, adding no height.
+const IMAGE_PX = isMobileTimeline ? viewportPx * 0.30 : 0;
 const GAP_TAIL_PX = viewportPx * 0.14;   // breathing room below the narrative
 const eraGapSVG = eras.map((era, eraIndex) => {
   const meas = document.createElement('div');
@@ -1913,7 +1934,7 @@ const eraGapSVG = eras.map((era, eraIndex) => {
   const textH = meas.offsetHeight;
   meas.remove();
 
-  const panelPx = PAD_TOP_PX + textH + PAD_BOTTOM_PX + GAP_TAIL_PX;
+  const panelPx = IMAGE_PX + PAD_TOP_PX + textH + PAD_BOTTOM_PX + GAP_TAIL_PX;
   const minPx   = viewportPx * (isMobileTimeline ? 1.1 : 0.6);   // floor so a short era still reads
   return Math.max(panelPx, minPx) / ctmScale;          // → SVG units
 });
