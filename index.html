@@ -81,9 +81,17 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   font-family: 'Crimson Text', serif;
   font-size: clamp(2.2rem, 6vw, 4.6rem);
   line-height: 1.12;
-  margin-bottom: 1.3rem;
+  margin-bottom: 0.5rem;
   color: var(--paper);
   font-weight: 600;
+}
+
+.tl-intro-subtitle {
+  font-family: 'Crimson Text', serif;
+  font-style: italic;
+  font-weight: 400;
+  font-size: clamp(1.1rem, 2.6vw, 1.7rem);
+  color: var(--paper-mid);
 }
 
 @keyframes scrollCuePulse {
@@ -583,7 +591,28 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
     overflow: auto;
     padding: 1.1rem 1rem 1rem;
   }
-  .policy-figure, .policy-figure-landmark { max-width: 90vw; margin-bottom: 0.5rem; }
+  /* On mobile the card sits centred under its node (no side margin to float
+     in like on desktop), so it lands directly on the river/ship art as it
+     pans past. Without a background here, text reads straight against the
+     moving teal river underneath it. */
+  .margin-card {
+    background: rgba(247,243,235,0.95);
+    border-radius: 3px;
+    box-shadow: 0 8px 24px rgba(36,33,29,0.16);
+  }
+  /* Same problem as the card: the caption below the photo is plain text with
+     no background, and the figure sits centred over the river like the card
+     does, so it reads straight against the river underneath. Wrap the whole
+     figure in the same paper plate rather than backing the caption alone —
+     keeps photo + credit reading as one block. */
+  .policy-figure, .policy-figure-landmark {
+    max-width: 90vw;
+    margin-bottom: 0.5rem;
+    background: rgba(247,243,235,0.95);
+    border-radius: 3px;
+    box-shadow: 0 8px 24px rgba(36,33,29,0.16);
+    padding: 0.6rem 0.6rem 0.5rem;
+  }
   .policy-photo { max-height: min(16vh, 135px); }
   .policy-caption { font-size: 0.55rem; margin-top: 0.35rem; }
 }
@@ -596,7 +625,13 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 #era-world-layer {
   position: fixed;
   inset: 0;
-  z-index: 60;             /* above river/ship (z1), below cards (z100) */
+  /* Above cards (z100) as well as river/ship (z1): a still-visible card from
+     the era just left behind can still be on-screen (not yet panned above the
+     viewport) when this panel's opaque slab starts covering the same band —
+     seen on mobile, where per-node spacing leaves less scroll runway before
+     an era gap than desktop. The panel is meant to fully occlude the scene
+     it scrolls through, cards included, so it must render above them. */
+  z-index: 150;            /* above river/ship (z1) and cards (z100); below recap (z200) */
   pointer-events: none;
   transform-origin: 0 0;
   will-change: transform;
@@ -852,7 +887,8 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
       </div>
     </div>
     <div class="tl-intro-inner">
-      <h2 class="tl-intro-title">Who Counts as American? A History in Law.</h2>
+      <h2 class="tl-intro-title">Who Counts as American?</h2>
+      <p class="tl-intro-subtitle">A History in Law</p>
     </div>
     <div class="tl-scroll-cue">
       <span class="tl-scroll-label">Scroll to begin</span>
@@ -2257,6 +2293,30 @@ const pathBottomY = points[points.length - 1].y;
   // lake's CENTRE — not its mouth — sits mid-page at rest.
   const LAKE_CENTER_RAWY = 190;                          // (minY+maxY)/2 of the US path (0..380)
   const lakeCenterWorldY = LAKE_S * LAKE_CENTER_RAWY + lakeBY;
+  // Coastline left/right X sampled every 20 raw units down the US path (see
+  // US_MAP_PATH_D), used to fit the hero title/subtitle to the ACTUAL local
+  // coastline rather than the shape's overall bounding width — the Great Lakes
+  // notch (~y180-220) and the Gulf/Maine tapers (below ~y240, above ~y40) make
+  // the true width vary far more than a single bounding-box number captures.
+  const LAKE_WIDTH_PROFILE = [
+    [0, 67.2, 67.2], [20, 45.2, 153.0], [40, 42.0, 613.0], [60, 35.0, 617.5], [80, 24.5, 597.2],
+    [100, 22.8, 595.2], [120, 15.8, 585.8], [140, 15.2, 570.5], [160, 23.8, 561.8], [180, 26.0, 561.5],
+    [200, 32.5, 564.0], [220, 45.8, 563.5], [240, 65.0, 545.2], [260, 97.0, 525.8], [280, 131.0, 511.0],
+    [300, 209.2, 512.5], [320, 218.5, 523.8], [340, 269.5, 533.0], [360, 281.0, 538.8], [380, 308.0, 308.0],
+  ];
+  function lakeWidthAtRawY(y) {
+    y = Math.max(0, Math.min(380, y));
+    for (let i = 0; i < LAKE_WIDTH_PROFILE.length - 1; i++) {
+      const [y0, l0, r0] = LAKE_WIDTH_PROFILE[i];
+      const [y1, l1, r1] = LAKE_WIDTH_PROFILE[i + 1];
+      if (y >= y0 && y <= y1) {
+        const t = (y - y0) / (y1 - y0);
+        return (r0 + (r1 - r0) * t) - (l0 + (l1 - l0) * t);
+      }
+    }
+    const last = LAKE_WIDTH_PROFILE[LAKE_WIDTH_PROFILE.length - 1];
+    return last[2] - last[1];
+  }
 
   function drawRiver(camTx, camTy, camScale, ctm, liftPx) {
     if (!riverCtx || !ctm) return;
@@ -2533,6 +2593,20 @@ const pathBottomY = points[points.length - 1].y;
       const lakeCenterScreen = screenCTM.d * (camTy + lakeCenterWorldY) + screenCTM.f;
       const delta = lakeCenterScreen - window.innerHeight / 2;
       tlHeroInner.style.transform = `translateY(calc(-50% + ${delta}px))`;
+      // Cap the block's width to the coastline it ACTUALLY spans (read from last
+      // frame's box — one frame of lag, imperceptible during scroll) rather than
+      // the shape's overall bounding width, so it wraps to stay inside the
+      // coastline instead of overhanging a local narrow point like the Great
+      // Lakes notch or the Gulf/Maine tapers.
+      const rect = tlHeroInner.getBoundingClientRect();
+      const screenToRawY = (sy) => ((sy - screenCTM.f) / screenCTM.d - camTy - lakeBY) / LAKE_S;
+      const safeRawWidth = Math.min(
+        lakeWidthAtRawY(screenToRawY(rect.top)),
+        lakeWidthAtRawY(screenToRawY((rect.top + rect.bottom) / 2)),
+        lakeWidthAtRawY(screenToRawY(rect.bottom))
+      );
+      const maxWidthPx = safeRawWidth * LAKE_S * camScale * screenCTM.a * 0.86;
+      tlHeroInner.style.maxWidth = Math.max(200, maxWidthPx) + 'px';
     }
 
     // ── LANE LABELS ──
