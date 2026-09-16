@@ -77,24 +77,6 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   opacity: 1;
 }
 
-.tl-section-pre {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.65rem;
-  letter-spacing: 0.2em;
-  text-transform: uppercase;
-  color: var(--paper-mid);
-  margin-bottom: 1rem;
-}
-
-.tl-section-eye {
-  font-family: 'Space Mono', monospace;
-  font-size: 0.72rem;
-  letter-spacing: 0.24em;
-  text-transform: uppercase;
-  color: #d8a13a;
-  margin-bottom: 1.4rem;
-}
-
 .tl-intro-title {
   font-family: 'Crimson Text', serif;
   font-size: clamp(2.2rem, 6vw, 4.6rem);
@@ -102,16 +84,6 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
   margin-bottom: 1.3rem;
   color: var(--paper);
   font-weight: 600;
-}
-
-.tl-intro-sub {
-  font-family: 'Crimson Text', serif;
-  font-style: italic;
-  font-size: clamp(1.05rem, 2.4vw, 1.35rem);
-  color: var(--paper-mid);
-  max-width: 38ch;
-  margin: 0 auto;
-  line-height: 1.5;
 }
 
 @keyframes scrollCuePulse {
@@ -572,12 +544,6 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
 
 @media(max-width:768px) {
   .tl-intro-title { font-size: clamp(1.8rem, 8vw, 2.6rem); }
-  .tl-intro-sub {
-    font-size: 1rem;
-    max-width: 24rem;
-    line-height: 1.65;
-    padding: 0 1rem;
-  }
   .tl-intro-hint { margin-top: 2rem; }
   /* Scroll budget must track the path length. The phone path is now sized from
      a target on-screen node gap (NODE_SPACING_PX), so it is much longer in
@@ -886,13 +852,10 @@ body{background:var(--paper);color:var(--ink);font-family:var(--body);font-size:
       </div>
     </div>
     <div class="tl-intro-inner">
-      <p class="tl-section-pre">From the word to the law</p>
-      <p class="tl-section-eye">1600s – Today · Six eras, thirty-four policies</p>
-      <h2 class="tl-intro-title">Drawing the Map of Who Belongs</h2>
-      <p class="tl-intro-sub">Since before there was a country, America has kept deciding who counts as American — and written each answer into law. Follow that current from the colonies to the present, one policy at a time.</p>
+      <h2 class="tl-intro-title">Who Counts as American? A History in Law.</h2>
     </div>
     <div class="tl-scroll-cue">
-      <span class="tl-scroll-label">Scroll</span>
+      <span class="tl-scroll-label">Scroll to begin</span>
       <div class="tl-scroll-line"></div>
     </div>
   </div>
