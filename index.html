@@ -1731,23 +1731,25 @@ function getPathDistanceToPoint(pathNode, len, point) {
   return dx * dx + dy * dy;
 }
 
-function getNodePathLengths(pathNode, points, totalLen) {
-  const coarseSteps = 8000;
-  const coarseStepLen = totalLen / coarseSteps;
+function getNodePathLengths(pathNode, points, totalLen, samples) {
+  // Coarse pass reuses `samples` — the same pre-walked array `initPolicyTimeline`
+  // builds once for drawing the river — instead of re-walking the path with its
+  // own dedicated getPointAtLength calls. That used to be a second, independent
+  // ~8000-call scan of the exact same curve on every init; now it's zero extra
+  // geometry calls, just array math over points already in memory.
+  const coarseStepLen = totalLen / Math.max(1, samples.length - 1);
   const matches = points.map((_, index) => ({
     len: index === 0 ? 0 : index === points.length - 1 ? totalLen : 0,
     dist: Infinity
   }));
 
-  for (let step = 0; step <= coarseSteps; step++) {
-    const len = (step / coarseSteps) * totalLen;
-    const pt = pathNode.getPointAtLength(len);
-
+  for (let s = 0; s < samples.length; s++) {
+    const pt = samples[s];
     points.forEach((point, index) => {
       const dx = pt.x - point.x;
       const dy = pt.y - point.y;
       const dist = dx * dx + dy * dy;
-      if (dist < matches[index].dist) matches[index] = {dist, len};
+      if (dist < matches[index].dist) matches[index] = {dist, len: pt.len};
     });
   }
 
@@ -2191,24 +2193,37 @@ const pathBottomY = points[points.length - 1].y;
   ship.node().setAttributeNS('http://www.w3.org/1999/xlink', 'xlink:href', SHIP_SRC);
 
   const totalLen = animPath.node().getTotalLength();
+
+  // ── PATH SAMPLES ──────────────────────────────────────────────────────
+  // Pre-sample the whole path ONCE, in raw SVG-viewBox coords, and reuse it for
+  // both drawing the river and locating each node's arc-length below —
+  // previously the two walked the same curve independently (a dedicated
+  // ~8000-step scan for node lengths, plus this pass again for the river),
+  // roughly doubling the getPointAtLength calls an init needed to do.
+  //
+  // Resolution is a SCREEN-px target, not a fixed viewBox-unit step: totalLen
+  // is expressed via px() (screen px / ctmScale — see the sizing constants
+  // above), so a phone's smaller ctmScale inflates totalLen in viewBox units
+  // for the same on-screen path length. A fixed-viewBox-unit step (the old
+  // `totalLen / 6`) therefore over-sampled on a phone — every ~2 screen px
+  // measured, vs desktop's ~6.75 screen px, for equally smooth output.
+  // Sampling by screen px keeps cost proportional to what's actually drawn.
+  const RIVER_SAMPLE_STEP_PX = 6.75;   // ≈ desktop's existing effective spacing
+  const riverSampleCount = Math.max(160, Math.floor((totalLen * ctmScale) / RIVER_SAMPLE_STEP_PX));
+  const riverSamples = new Array(riverSampleCount + 1);
+  for (let i = 0; i <= riverSampleCount; i++) {
+    const len = (i / riverSampleCount) * totalLen;
+    const pt = animPath.node().getPointAtLength(len);
+    riverSamples[i] = { x: pt.x, y: pt.y, len };
+  }
+
   // Measure per UNIFIED vertex, then slice back to timeline-relative indices so
   // all downstream node math keeps using the ORIGINAL points index (0 = seam).
-  const unifiedAtLength = getNodePathLengths(animPath.node(), unifiedPoints, totalLen);
+  const unifiedAtLength = getNodePathLengths(animPath.node(), unifiedPoints, totalLen, riverSamples);
   const timelineStartDistance = unifiedAtLength[timelineStartIndex];   // seam arc length
   const heroRiverDistance = timelineStartDistance;                     // hero portion length
   const timelineRiverDistance = totalLen - timelineStartDistance;      // timeline portion length
   const nodeAtLength = points.map((_, i) => unifiedAtLength[timelineStartIndex + i]);
-
-  // ── RIVER SAMPLES ─────────────────────────────────────────────────────
-  // Pre-sample the path once (raw SVG-viewBox coords). Each frame these are
-  // pushed through the camera transform and the SVG→screen CTM, then drawn as a
-  // single flat-blue stroked band on the canvas. No shadow, no second outline.
-  const riverSampleCount = Math.max(160, Math.floor(totalLen / 6));
-  const riverSamples = new Array(riverSampleCount + 1);
-  for (let i = 0; i <= riverSampleCount; i++) {
-    const pt = animPath.node().getPointAtLength((i / riverSampleCount) * totalLen);
-    riverSamples[i] = { x: pt.x, y: pt.y };
-  }
 
   // ── SEA TAIL ──────────────────────────────────────────────────────────
   // Past the last node the river straightens out to run due south and widens
